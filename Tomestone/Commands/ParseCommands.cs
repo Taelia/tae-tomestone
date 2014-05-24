@@ -258,9 +258,9 @@ namespace Tomestone.Chatting
 
         public void Reply(Channel channel, IrcUser from, string message)
         {
-            //Only check if a reply is required 80% of the time.
+            //Only check if a reply is required 25% of the time.
             Random r = new Random();
-            if (r.Next(0, 100) < 80)
+            if (r.Next(0, 100) < 25)
                 defaultCommands.Reply(channel, from, message);
         }
     }
