@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Tomestone.Chatting;
 using Tomestone.Models;
+using System.Data;
 
 namespace Tomestone.Commands
 {
@@ -124,7 +125,12 @@ namespace Tomestone.Commands
             data.Add("reply", reply);
 
             var ok = _database.Insert(TableType.COMMAND, data);
-            if (ok) _chat.SendStatus(Main.chatMain, "-" + reply + "- succesfully added!");
+            if (ok)
+            {
+                var obj = _database.NewestEntry(TableType.COMMAND);
+                _chat.SentMessages.Add(obj);
+                _chat.SendStatus(Main.chatMain, "-" + reply + "- succesfully added!");
+            }
         }
 
         public void ExecuteSpecialCommand(string command)
