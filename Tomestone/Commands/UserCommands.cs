@@ -13,7 +13,9 @@ namespace Tomestone.Commands
 {
     public class UserCommands
     {
+        private Random r = new Random();
         private DateTime getCooldown = DateTime.Now;
+        private int _nextCooldown;
 
         private TomeChat _chat;
         private ChatDatabase _database;
@@ -80,11 +82,11 @@ namespace Tomestone.Commands
             }
         }
 
-        public void ExecuteGetCommand(string type)
+        public void ExecuteGetCommand(string type, string from = null)
         {
-            if (DateTime.Now < getCooldown + TimeSpan.FromMinutes(2))
+            if (DateTime.Now < getCooldown)
             {
-                var percentage = Math.Round(100 * DateTime.Now.Subtract(getCooldown).TotalMinutes / 2);
+                var percentage = 100 - Math.Round(100 * (getCooldown.Subtract(DateTime.Now).TotalMinutes) / _nextCooldown);
                 _chat.SendStatus(Main.chatMain, "Recharging get! " + percentage + "% done.");
                 return;
             }
@@ -93,7 +95,10 @@ namespace Tomestone.Commands
             switch (type)
             {
                 case "quote":
-                    obj = _database.GetRandom(TableType.QUOTE);
+                    if (from == null)
+                    {
+                        _chat.SendStatus(
+                    obj = _database.GetRandomBy(TableType.QUOTE, "user", from);
                     break;
                 default:
                     //Get all commands of type 'type', and then get the id of any random command.
@@ -105,8 +110,10 @@ namespace Tomestone.Commands
                     }
                     break;
             }
+            
+            _nextCooldown = r.Next(10, 15);
+            getCooldown = DateTime.Now + TimeSpan.FromMinutes(_nextCooldown);
 
-            getCooldown = DateTime.Now;
             _chat.SentMessages.Add(obj);
             _chat.SendStatus(Main.chatMain, obj.Message);
         }

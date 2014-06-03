@@ -187,19 +187,36 @@ namespace Tomestone.Chatting
             _chat.SendStatus(Main.chatMain, "SYNTAX: '!get A' where A is [tome or dragon].");
         }
 
+        //This method requires re-writing. Perhaps splitting !get quote and !get X completely.
         public void ParseGet(Channel channel, string message)
         {
-            Match match = Regex.Match(message, "!get (.+)");
+            //First check if the user wants a quote.
+            Match match = Regex.Match(message, "!get quote (.+)");
 
             if (match.Success)
             {
-                string type = match.Groups[1].ToString();
+                string user = match.Groups[1].ToString().ToLower();
 
-                userCommands.ExecuteGetCommand(type);
+                userCommands.ExecuteGetCommand("quote", user);
                 return;
             }
+            else
+            {
+                //If the user doesn't want a quote, check what it does want.
+                match = Regex.Match(message, "!get (.+)");
 
-            _chat.SendStatus(Main.chatMain, "SYNTAX: '!get A' where A is [quote or question].");
+                if (match.Success)
+                {
+                    string type = match.Groups[1].ToString();
+                    
+                    //If the user wants a quote but didn't supply a username, give the Syntax message.
+                    if (type != "quote")
+                        userCommands.ExecuteGetCommand(type);
+                    return;
+                }
+            }
+
+            _chat.SendStatus(Main.chatMain, "SYNTAX: '!get A' where A is an !add-ed command, or '!get quote B' where B is a username.");
         }
 
         public void ParseAdd(Channel channel, IrcUser from, string message)
