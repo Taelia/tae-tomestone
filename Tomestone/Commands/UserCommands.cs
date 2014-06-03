@@ -95,9 +95,6 @@ namespace Tomestone.Commands
             switch (type)
             {
                 case "quote":
-                    if (from == null)
-                    {
-                        _chat.SendStatus(
                     obj = _database.GetRandomBy(TableType.QUOTE, "user", from);
                     break;
                 default:
@@ -110,7 +107,7 @@ namespace Tomestone.Commands
                     }
                     break;
             }
-            
+
             _nextCooldown = r.Next(10, 15);
             getCooldown = DateTime.Now + TimeSpan.FromMinutes(_nextCooldown);
 
@@ -157,6 +154,6 @@ namespace Tomestone.Commands
 
             _chat.SendStatus(Main.chatMods, from + " suggested a highlight at " + now + "; " + description);
         }
-        
+
     }
 }
