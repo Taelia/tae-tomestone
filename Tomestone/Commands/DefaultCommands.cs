@@ -62,6 +62,7 @@ namespace Tomestone.Commands
 
             //Finally, send the message.
             _chat.SendMessage(channel.Name, reply);
+            _chat.ReceivedMessages.Add(new MessageObject(from, message));
         }
 
         public void ExecuteRepeatCommand(string time)

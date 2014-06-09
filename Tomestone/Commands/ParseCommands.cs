@@ -21,6 +21,8 @@ namespace Tomestone.Chatting
         private UserCommands userCommands;
         private DefaultCommands defaultCommands;
 
+        private Dictionary<string, DateTime> blacklist;
+
         public ParseCommands(TomeChat chat, ChatDatabase database)
         {
             _chat = chat;
@@ -28,7 +30,83 @@ namespace Tomestone.Chatting
             adminCommands = new AdminCommands(chat, database);
             userCommands = new UserCommands(chat, database);
             defaultCommands = new DefaultCommands(chat, database);
+
+            blacklist = new Dictionary<string,DateTime>();
         }
+
+        public void ParseAdminCommands(Channel channel, IrcUser from, string message, string command)
+        {
+            // only receive commands sent from mod channel
+            if (channel.Name != Main.chatMods) return;
+
+            switch (command)
+            {
+                case "@info":
+                    ParseInfo(channel, message);
+                    break;
+                case "@delete":
+                    ParseDelete(channel, message);
+                    break;
+                case "@edit":
+                    ParseEdit(channel, message);
+                    break;
+                case "@entry":
+                    ParseEntry(channel, message);
+                    break;
+                case "@add":
+                    ParseSpecialAdd(channel, from, message);
+                    break;
+                case "@repeat":
+                    ParseRepeat(channel, from, message);
+                    break;
+                case "@check":
+                    ParseCheck(channel, message);
+                    break;
+                case "@tomeout":
+                    ParseTomeout(channel, message);
+                    break;
+            }
+        }
+
+        public void ParseUserCommands(Channel channel, IrcUser from, string message, string command)
+        {
+            if (channel.Name != Main.chatMain) return;
+
+            // ignore commands from blacklisted users
+            if (CheckBlacklist(from.Nick)) return;
+
+            switch (command)
+            {
+                case "!teach":
+                    ParseTeach(channel, from, message);
+                    break;
+                case "!quote":
+                    ParseQuote(channel, message);
+                    break;
+                case "!help":
+                    ParseHelp(channel, message);
+                    break;
+                case "!get":
+                    ParseGet(channel, message);
+                    break;
+                case "!add":
+                    ParseAdd(channel, from, message);
+                    break;
+                case "!highlight":
+                    ParseHighlight(channel, from, message);
+                    break;
+                default:
+                    ParseSpecial(channel, from, message);
+                    break;
+            }
+        }
+
+        public void ParseDefaultCommands(Channel channel, IrcUser from, string message, string command)
+        {
+            Reply(channel, from, message);
+        }
+
+        //**** ADMIN COMMANDS ****
 
         public void ParseInfo(Channel channel, string message)
         {
@@ -129,6 +207,55 @@ namespace Tomestone.Chatting
 
             _chat.SendStatus(Main.chatMods, "SYNTAX: '@repeat A B' where A is a timestamp [hh:mmtt] (e.g. 02:05am), and B is the message you want to enter.");
         }
+
+        public void ParseRepeat()
+        {
+            var time = DateTime.Now.ToString("hh:mmtt");
+
+            defaultCommands.ExecuteRepeatCommand(time);
+        }
+
+
+        public void ParseCheck(Channel channel, string message)
+        {
+            // separate the text into the command to be queried, and additional parameters (if applicable)
+            Match match = Regex.Match(message, "@check (.+?) (.+)");
+
+            if (match.Success)
+            {
+                string type = match.Groups[1].Value;
+                string args = match.Groups[2].Value;
+                adminCommands.ExecuteCheckCommand(type, args);
+
+                return;
+            }
+
+            _chat.SendStatus(Main.chatMods, "SYNTAX: '@delete A B' where A is [commmand, quote or reply] and B is the id-number.");
+        }
+
+        // times out the specified user from using tome commands for a specified time
+        // assumes that the username is provided as the first argument after check
+        // also assumes that the second parameter is a numerical input
+        public void ParseTomeout(Channel channel, string message)
+        {
+            // separate the text into the command to be queried, and additional parameters (if applicable)
+            Match match = Regex.Match(message, "@tomeout (.+?) ([0-9]+)");
+
+            if (match.Success)
+            {
+                string user = match.Groups[1].Value;
+                DateTime time = DateTime.Now + TimeSpan.FromMinutes(Double.Parse(match.Groups[2].Value));
+                //adminCommands.ExecuteTomeoutCommand(user, time);
+
+                AddUserToBlacklist(user, time);
+
+                return;
+            }
+
+            _chat.SendStatus(Main.chatMods, "SYNTAX: '@tomeout A B' where A is a username, and B is a duration in minutes.");
+        }
+
+        //**** USER COMMANDS ****
 
         /// <summary>
         /// Allow a user to teach Tomestone new replies.
@@ -248,14 +375,6 @@ namespace Tomestone.Chatting
             }
         }
 
-        public void ParseRepeat()
-        {
-            var time = DateTime.Now.ToString("hh:mmtt");
-
-            defaultCommands.ExecuteRepeatCommand(time);
-        }
-
-
         public void Reply(Channel channel, IrcUser from, string message)
         {
             //Only check if a reply is required 25% of the time.
@@ -263,5 +382,29 @@ namespace Tomestone.Chatting
             if (r.Next(0, 100) < 25)
                 defaultCommands.Reply(channel, from, message);
         }
+
+        public void AddUserToBlacklist(string username, DateTime duration)
+        {
+            if (!blacklist.ContainsKey(username)) blacklist.Add(username, duration);
+        }
+
+        public Boolean CheckBlacklist(string username)
+        {
+            // check if the specified username is in the blacklist.
+            if (blacklist.ContainsKey(username))
+            {
+                // now check if the timeout has expired
+                if (blacklist[username].CompareTo(DateTime.Now) < 0)
+                {
+                    // remove the user from the timeout list and return false
+                    blacklist.Remove(username);
+                    return false;
+                }
+                return true;
+            }
+            return false;
+        }
+
+
     }
 }

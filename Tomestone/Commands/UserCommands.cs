@@ -150,6 +150,5 @@ namespace Tomestone.Commands
 
             _chat.SendStatus(Main.chatMods, from + " suggested a highlight at " + now + "; " + description);
         }
-        
     }
 }

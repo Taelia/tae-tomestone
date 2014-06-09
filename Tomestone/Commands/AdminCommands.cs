@@ -20,6 +20,7 @@ namespace Tomestone.Commands
             _database = database;
         }
 
+        //searches for a message in sent message history
         public void ExecuteInfoCommand(string search)
         {
             var obj = _chat.SentMessages.Search(search);
@@ -32,6 +33,7 @@ namespace Tomestone.Commands
             _chat.SendStatus(Main.chatMods, "Message not found.");
         }
 
+        // fetches a single entry 
         public void ExecuteEntryCommand(string type, string id)
         {
             switch (type)
@@ -58,6 +60,7 @@ namespace Tomestone.Commands
             }
         }
 
+        // edits an existing entry in the database
         public void ExecuteEditCommand(string type, string id, string toReplace, string replaceWith)
         {
             switch (type)
@@ -124,6 +127,83 @@ namespace Tomestone.Commands
 
             var ok = _database.Insert(TableType.REPEAT, data);
             if (ok) _chat.SendStatus(Main.chatMods, "-" + message + "- succesfully added!");
+        }
+
+        public void ExecuteCheckCommand(string type, string args)
+        {
+            switch (type)
+            {
+                case "reply":
+                    // there are two cases for looking up replies. 
+                    // 1. if no additional argument is provided, this is treated as a querry for triggers
+                    // 2. if an addiontal argument is provided, this is treated a querry for all the replies for a specific trigger
+
+
+                    List<MessageObject> results;
+
+                    if (args == null || args == "") // Case 1:
+                    {
+                        // this should return a list of UNIQUE trigger strings
+                        results = _database.GetDistinctByCol(TableType.REPLY, "trigger");
+                    }
+                    else                            // Case 2:
+                    {
+                        // get a list of all replies for the specified trigger (should be in args)
+                        results = _database.SearchBy(TableType.REPLY, "trigger", args);
+                    }
+
+                    string message = "";
+                    if (results != null)
+                    {
+                        var table = _database.GetTable(TableType.REPLY);
+
+                        foreach (MessageObject entry in results)
+                        {
+                            message = message + entry.Data[table.IdName] + ":" + entry.Message + " | ";
+                        }
+
+                        _chat.SendStatus(Main.chatMods, "list of replies for trigger - " + args + ": " + message);
+
+                    }
+                    return;
+
+                case "quote":
+                    /*
+                    var results = _database.SearchBy(TableType.REPLY, "trigger", args);
+
+                    // need to get all quotes, and display them
+                    var tableType = _database.GetTable(TableType.QUOTE);
+
+                    // this code gets all the entries in a table and returns them
+                    var parms = new Dictionary<string, string>();
+                    parms.Add("@TableName", type.TableName);
+
+                    var results = _db.Query("SELECT * FROM @TableName", parms);
+                    if (results.Rows.Count == 0) return null;
+
+                    var random = new Random();
+                    int r = random.Next(0, results.Rows.Count);
+
+                    var result = results.Rows[r];
+
+                    var obj = CreateObject(table, result);
+                    //return obj;
+                    return;
+                    */
+                case "command":
+                
+                
+                case "question":
+                case "special":
+                case "repeat":
+                    // query by time, or query times
+                    _chat.SendStatus(Main.chatMods, "not implemented");
+                   
+                    return;
+                default:
+                    _chat.SendStatus(Main.chatMods, "Type " + type + " not found.");
+                    return;
+            }
         }
     }
 }

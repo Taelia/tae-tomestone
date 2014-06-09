@@ -152,6 +152,7 @@ namespace Tomestone
             return obj;
         }
 
+        // returns all entries in a table based on a column type and a text field
         public List<MessageObject> SearchBy(TableType table, string columnName, string search)
         {
             var type = GetTable(table);
@@ -176,6 +177,25 @@ namespace Tomestone
                     if (results.Rows.Count == 0) return null;
                 }
             }
+
+            //If results found, convert to a list of messages.
+            var list = new List<MessageObject>();
+            foreach (DataRow r in results.Rows)
+                list.Add(CreateObject(table, r));
+            return list;
+        }
+
+        public List<MessageObject> GetDistinctByCol(TableType table, string columnName)
+        {
+            var type = GetTable(table);
+
+            //Get the message to be edited
+            var parms = new Dictionary<string, string>();
+            parms.Add("@TableName", type.TableName);
+            parms.Add("@ColName", columnName);
+
+            var results = _db.Query("SELECT DISTINCT @ColName FROM @TableName", parms);
+            if (results.Rows.Count == 0) return null;
 
             //If results found, convert to a list of messages.
             var list = new List<MessageObject>();

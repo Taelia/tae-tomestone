@@ -63,13 +63,13 @@ namespace Tomestone.Chatting
                 switch (command[0])
                 {
                     case '@':
-                        AdminCommands(channel, from, message, command);
+                        _parse.ParseAdminCommands(channel, from, message, command);
                         break;
                     case '!':
-                        UserCommands(channel, from, message, command);
+                        _parse.ParseUserCommands(channel, from, message, command);
                         break;
                     default:
-                        DefaultCommands(channel, from, message, command);
+                        _parse.ParseDefaultCommands(channel, from, message, command);
                         break;
                 }
             }
