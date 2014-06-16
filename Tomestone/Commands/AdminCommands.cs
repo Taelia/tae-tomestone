@@ -171,6 +171,21 @@ namespace Tomestone.Commands
                 // this should return a list of UNIQUE trigger strings
                 results = _database.GetDistinctByCol(TableType.REPLY, "trigger");
                 message = "list of unique triggers: ";
+                
+                if (results != null) 
+                {
+                    // return a list of tiggers
+                    foreach (MessageObject entry in results)
+                    {
+                        message = message + entry.Message + " | ";
+                    }
+                    _chat.SendStatus(Main.chatMods, message);
+                }
+                else // no results
+                {
+                    _chat.SendStatus(Main.chatMods, message + " No results to display.");
+                }
+                return;
             }
             else                            // Case 2:
             {
