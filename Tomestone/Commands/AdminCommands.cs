@@ -160,7 +160,7 @@ namespace Tomestone.Commands
 
         private void CheckReplies(string args)
         {
-            List<MessageObject> results;
+            List<MessageObject> results = null;
             string message = "";
 
             // there are two cases for looking up replies. 
@@ -185,29 +185,26 @@ namespace Tomestone.Commands
 
         private void CheckQuotes(string args)
         {
-            /*
-                    var results = _database.SearchBy(TableType.REPLY, "trigger", args);
+            List<MessageObject> results = null;
+            string message = "";
 
-                    // need to get all quotes, and display them
-                    var tableType = _database.GetTable(TableType.QUOTE);
+            // Cases for quote seaching:
+            // 1. no argument provided: get ALL quotes (not meaningful)
+            // 2. search for quotes by username
 
-                    // this code gets all the entries in a table and returns them
-                    var parms = new Dictionary<string, string>();
-                    parms.Add("@TableName", type.TableName);
+            if (args == null) // get all quotes, not really a meaningful search
+            {
+                message = "Please specifiy a username for searching for quotes.";
 
-                    var results = _db.Query("SELECT * FROM @TableName", parms);
-                    if (results.Rows.Count == 0) return null;
+            }
+            else // get quotes by a single username
+            {
+                results = _database.SearchBy(TableType.QUOTE, "user", args);
+                message = "List of quotes for user - " + args + ": ";
+            }
 
-                    var random = new Random();
-                    int r = random.Next(0, results.Rows.Count);
-
-                    var result = results.Rows[r];
-
-                    var obj = CreateObject(table, result);
-                    //return obj;
-                    return;
-                    */
-            _chat.SendStatus(Main.chatMods, "not implemented");
+            // prepare output and send it
+            FormatCheckOutput(message, results, TableType.QUOTE);
         }
 
         private void CheckCommand(string args)

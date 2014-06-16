@@ -415,6 +415,7 @@ namespace Tomestone.Chatting
 
         public void AddUserToBlacklist(string username, DateTime duration)
         {
+            // only process the command if the user isnt already timed out
             if (!blacklist.ContainsKey(username)) blacklist.Add(username, duration);
         }
 
@@ -426,10 +427,11 @@ namespace Tomestone.Chatting
                 // now check if the timeout has expired
                 if (blacklist[username].CompareTo(DateTime.Now) < 0)
                 {
-                    // remove the user from the timeout list and return false
+                    // remove the user from the timeout list and return false (not timed out)
                     blacklist.Remove(username);
                     return false;
                 }
+                // still timed out
                 return true;
             }
             return false;
