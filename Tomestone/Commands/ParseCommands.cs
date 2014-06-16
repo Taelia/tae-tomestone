@@ -229,16 +229,15 @@ namespace Tomestone.Chatting
 
                 return;
             }
-            else // 1 argument case
+            else // Check if request follows 1 argument syntax
             {
                 match = Regex.Match(message, "@check (.+)");
 
                 if (match.Success)
                 {
                     _chat.SendStatus(Main.chatMods, "currently not functional");
-                    //string type = match.Groups[1].Value;
-                    //string args = null;
-                    //adminCommands.ExecuteCheckCommand(type, args);
+                    string type = match.Groups[1].Value;
+                    adminCommands.ExecuteCheckCommand(type, null);
 
                     return;
                 }

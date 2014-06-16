@@ -131,32 +131,61 @@ namespace Tomestone.Commands
 
         public void ExecuteCheckCommand(string type, string args)
         {
-            List<MessageObject> results;
-            string message = "";
             
             switch (type)
             {
                 case "reply":
-                    // there are two cases for looking up replies. 
-                    // 1. if no additional argument is provided, this is treated as a querry for triggers
-                    // 2. if an addiontal argument is provided, this is treated a querry for all the replies for a specific trigger
-                    if (args == null || args == "") // Case 1:
-                    {
-                        // this should return a list of UNIQUE trigger strings
-                        results = _database.GetDistinctByCol(TableType.REPLY, "trigger");
-                        message = "list of unique triggers: ";
-                    }
-                    else                            // Case 2:
-                    {
-                        // get a list of all replies for the specified trigger (should be in args)
-                        results = _database.SearchBy(TableType.REPLY, "trigger", args);
-                        message = "list of replies for trigger - " + args + ": ";
-                    }
-                    
+                    CheckReplies(args);
                     break;
-
                 case "quote":
-                    /*
+                    CheckQuotes(args);
+                    break;
+                case "command":
+                    CheckCommand(args);
+                    break;
+                case "question":
+                    CheckQuestion(args);
+                    break;
+                case "special":
+                    CheckSpecial(args);
+                    break;
+                case "repeat":
+                    CheckRepeat(args);
+                    break;
+                default:
+                    _chat.SendStatus(Main.chatMods, "Type " + type + " not found.");
+                    break;
+            }
+        }
+
+        private void CheckReplies(string args)
+        {
+            List<MessageObject> results;
+            string message = "";
+
+            // there are two cases for looking up replies. 
+            // 1. if no additional argument is provided, this is treated as a querry for triggers
+            // 2. if an addiontal argument is provided, this is treated a querry for all the replies for a specific trigger
+            if (args == null || args == "") // Case 1:
+            {
+                // this should return a list of UNIQUE trigger strings
+                results = _database.GetDistinctByCol(TableType.REPLY, "trigger");
+                message = "list of unique triggers: ";
+            }
+            else                            // Case 2:
+            {
+                // get a list of all replies for the specified trigger (should be in args)
+                results = _database.SearchBy(TableType.REPLY, "trigger", args);
+                message = "list of replies for trigger - " + args + ": ";
+            }
+
+            // prepare output and send it
+            FormatCheckOutput(message, results, TableType.REPLY);
+        }
+
+        private void CheckQuotes(string args)
+        {
+            /*
                     var results = _database.SearchBy(TableType.REPLY, "trigger", args);
 
                     // need to get all quotes, and display them
@@ -178,26 +207,39 @@ namespace Tomestone.Commands
                     //return obj;
                     return;
                     */
-                case "command":
-                case "question":
-                case "special":
-                case "repeat":
-                    // for implementation: query by time, or query times
-                    
-                    
-                    _chat.SendStatus(Main.chatMods, "not implemented");
-                    return;
-                default:
-                    _chat.SendStatus(Main.chatMods, "Type " + type + " not found.");
-                    return;
-            }
+            _chat.SendStatus(Main.chatMods, "not implemented");
+        }
 
+        private void CheckCommand(string args)
+        {
+            _chat.SendStatus(Main.chatMods, "not implemented");
+        }
+
+        private void CheckQuestion(string args)
+        {
+            _chat.SendStatus(Main.chatMods, "not implemented");
+        }
+
+        private void CheckSpecial(string args)
+        {
+            _chat.SendStatus(Main.chatMods, "not implemented");
+        }
+
+        private void CheckRepeat(string args)
+        {
+            // for implementation: query by time, or query times
+
+            _chat.SendStatus(Main.chatMods, "not implemented");
+        }
+
+        private void FormatCheckOutput(string message, List<MessageObject> results, TableType type)
+        {
             // need to do additional checks here to format output according to number of results.
 
             // format results
-            if (results.Count != 0)
-            {                
-                var table = _database.GetTable(TableType.REPLY);
+            if (results != null)
+            {
+                var table = _database.GetTable(type);
 
                 //need to format output according to number of results
 
@@ -208,7 +250,7 @@ namespace Tomestone.Commands
                 }
                 else if (results.Count <= 10)
                 {
-                    // return a list of ID+reply
+                    // return a list of ID+content
                     foreach (MessageObject entry in results)
                     {
                         message = message + entry.Data[table.IdName] + ": " + entry.Message + " | ";
@@ -227,10 +269,11 @@ namespace Tomestone.Commands
             }
             else // no results
             {
-                _chat.SendStatus(Main.chatMods, "no results to display for: " + type + ", " + args);
+                _chat.SendStatus(Main.chatMods, "No results to display.");
             }
             return;
-
         }
+
+
     }
 }

@@ -185,6 +185,7 @@ namespace Tomestone
             return list;
         }
 
+        // An interface function implemented to obtain all unique values of the specified column
         public List<MessageObject> GetDistinctByCol(TableType table, string columnName)
         {
             var type = GetTable(table);
@@ -326,15 +327,9 @@ namespace Tomestone
             // this if clause was added to address the capability of the check
             // command to query for a list of triggers rather than a list of replies.
             // When querying for triggers, the DataRow object does not contain a "reply" field
-            if (result.ItemArray.Length > 1)
-            {
-                return result["reply"].ToString();
-            }
-            else
-            {
-                return result["trigger"].ToString();
-            }
-            
+            // furthermore, a length of 1 indicates trigger request.
+            if (result.ItemArray.Length > 1) return result["reply"].ToString();
+            else return result["trigger"].ToString();           
         }
     }
 
