@@ -221,7 +221,7 @@ namespace Tomestone.Chatting
             // separate the text into the command to be queried, and additional parameters (if applicable)
             Match match = Regex.Match(message, "@check (.+?) (.+)");
 
-            if (match.Success)
+            if (match.Success) // first case: two arguments (for commands such as reply)
             {
                 string type = match.Groups[1].Value;
                 string args = match.Groups[2].Value;
@@ -229,8 +229,22 @@ namespace Tomestone.Chatting
 
                 return;
             }
+            else // 1 argument case
+            {
+                match = Regex.Match(message, "@check (.+)");
 
-            _chat.SendStatus(Main.chatMods, "SYNTAX: '@delete A B' where A is [commmand, quote or reply] and B is the id-number.");
+                if (match.Success)
+                {
+                    _chat.SendStatus(Main.chatMods, "currently not functional");
+                    //string type = match.Groups[1].Value;
+                    //string args = null;
+                    //adminCommands.ExecuteCheckCommand(type, args);
+
+                    return;
+                }
+            }
+
+            _chat.SendStatus(Main.chatMods, "SYNTAX: '@check A B' where A is [commmand, quote or reply] and B is an additional parameter.");
         }
 
         // times out the specified user from using tome commands for a specified time

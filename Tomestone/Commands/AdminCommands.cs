@@ -131,41 +131,29 @@ namespace Tomestone.Commands
 
         public void ExecuteCheckCommand(string type, string args)
         {
+            List<MessageObject> results;
+            string message = "";
+            
             switch (type)
             {
                 case "reply":
                     // there are two cases for looking up replies. 
                     // 1. if no additional argument is provided, this is treated as a querry for triggers
                     // 2. if an addiontal argument is provided, this is treated a querry for all the replies for a specific trigger
-
-
-                    List<MessageObject> results;
-
                     if (args == null || args == "") // Case 1:
                     {
                         // this should return a list of UNIQUE trigger strings
                         results = _database.GetDistinctByCol(TableType.REPLY, "trigger");
+                        message = "list of unique triggers: ";
                     }
                     else                            // Case 2:
                     {
                         // get a list of all replies for the specified trigger (should be in args)
                         results = _database.SearchBy(TableType.REPLY, "trigger", args);
+                        message = "list of replies for trigger - " + args + ": ";
                     }
-
-                    string message = "";
-                    if (results != null)
-                    {
-                        var table = _database.GetTable(TableType.REPLY);
-
-                        foreach (MessageObject entry in results)
-                        {
-                            message = message + entry.Data[table.IdName] + ":" + entry.Message + " | ";
-                        }
-
-                        _chat.SendStatus(Main.chatMods, "list of replies for trigger - " + args + ": " + message);
-
-                    }
-                    return;
+                    
+                    break;
 
                 case "quote":
                     /*
@@ -191,19 +179,58 @@ namespace Tomestone.Commands
                     return;
                     */
                 case "command":
-                
-                
                 case "question":
                 case "special":
                 case "repeat":
-                    // query by time, or query times
+                    // for implementation: query by time, or query times
+                    
+                    
                     _chat.SendStatus(Main.chatMods, "not implemented");
-                   
                     return;
                 default:
                     _chat.SendStatus(Main.chatMods, "Type " + type + " not found.");
                     return;
             }
+
+            // need to do additional checks here to format output according to number of results.
+
+            // format results
+            if (results.Count != 0)
+            {                
+                var table = _database.GetTable(TableType.REPLY);
+
+                //need to format output according to number of results
+
+                if (results.Count == 1)
+                {
+                    // return detailed info for the entry
+                    message = message + results[0].Info();
+                }
+                else if (results.Count <= 10)
+                {
+                    // return a list of ID+reply
+                    foreach (MessageObject entry in results)
+                    {
+                        message = message + entry.Data[table.IdName] + ": " + entry.Message + " | ";
+                    }
+                }
+                else
+                {
+                    // return a list of IDs
+                    foreach (MessageObject entry in results)
+                    {
+                        message = message + entry.Data[table.IdName] + " | ";
+                    }
+                }
+                _chat.SendStatus(Main.chatMods, message);
+
+            }
+            else // no results
+            {
+                _chat.SendStatus(Main.chatMods, "no results to display for: " + type + ", " + args);
+            }
+            return;
+
         }
     }
 }

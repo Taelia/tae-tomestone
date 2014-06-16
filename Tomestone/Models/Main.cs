@@ -19,7 +19,7 @@ namespace Tomestone.Models
         public static Database Db { get { return Database.GetDatabase("tomestone.db"); } }
 
         //private string botName = "Tomestone";
-        //private string botOauth = "oauth:e1dmmpdsq34uppmhxdbqmhbesja6osr";
+        //private string botOauth = "oauth:npafwpg44j0a5iullxo2dt385n5jeco";
 
 
         public static string chatMain = "#taelia_";

@@ -322,8 +322,19 @@ namespace Tomestone
         public override string Message(DataRow result)
         {
             //Create the message for display
-            var reply = result["reply"].ToString();
-            return reply;
+
+            // this if clause was added to address the capability of the check
+            // command to query for a list of triggers rather than a list of replies.
+            // When querying for triggers, the DataRow object does not contain a "reply" field
+            if (result.ItemArray.Length > 1)
+            {
+                return result["reply"].ToString();
+            }
+            else
+            {
+                return result["trigger"].ToString();
+            }
+            
         }
     }
 
