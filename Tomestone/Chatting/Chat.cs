@@ -70,6 +70,7 @@ namespace Tomestone.Chatting
                         break;
                     default:
                         _parse.ParseDefaultCommands(channel, from, message, command);
+                        ReceivedMessages.Add(new MessageObject(from, message));
                         break;
                 }
             }

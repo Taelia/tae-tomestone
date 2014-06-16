@@ -218,6 +218,10 @@ namespace Tomestone.Chatting
 
         public void ParseCheck(Channel channel, string message)
         {
+            /**** TODO
+             * Implement argument checking and parsing a bit more cleanly
+             */
+
             // separate the text into the command to be queried, and additional parameters (if applicable)
             Match match = Regex.Match(message, "@check (.+?) (.+)");
 
@@ -235,7 +239,7 @@ namespace Tomestone.Chatting
 
                 if (match.Success)
                 {
-                    _chat.SendStatus(Main.chatMods, "currently not functional");
+                    //_chat.SendStatus(Main.chatMods, "currently not functional");
                     string type = match.Groups[1].Value;
                     adminCommands.ExecuteCheckCommand(type, null);
 

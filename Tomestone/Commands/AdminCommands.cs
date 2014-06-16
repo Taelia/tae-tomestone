@@ -266,7 +266,7 @@ namespace Tomestone.Commands
             }
             else // no results
             {
-                _chat.SendStatus(Main.chatMods, "No results to display.");
+                _chat.SendStatus(Main.chatMods, message + " No results to display.");
             }
             return;
         }
