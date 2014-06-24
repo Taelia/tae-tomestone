@@ -9,6 +9,14 @@ using System.Threading.Tasks;
 using Tomestone.Chatting;
 using TomeLib.Db;
 
+/*** NOTES
+ * future changes: 
+ * - restructure the database interface to use 1 tabletype instead of having to create a new object structure for each new table
+ *   that is added. Goal: get rid of hardcoding.
+ *   Could implement a generic 'table' class that will work on all of the above, and return 'null' if the table happens to miss 
+ *   one of these fields for said field.
+ */
+
 namespace Tomestone
 {
     public enum TableType { REPEAT, SPECIAL, COMMAND, REPLY, QUOTE, QUESTION, ERROR };

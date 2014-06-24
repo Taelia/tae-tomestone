@@ -16,6 +16,12 @@ namespace Tomestone.Commands
         private Random r = new Random();
         private DateTime getCooldown = DateTime.Now;
         private int _nextCooldown;
+        
+        private DateTime helpDragonCooldown = DateTime.Now;
+        private DateTime helpTomeCooldown = DateTime.Now;
+        private DateTime raidCooldown = DateTime.Now;
+        private TimeSpan _nextHelpCooldown = TimeSpan.FromMinutes(2);
+        
 
         private TomeChat _chat;
         private ChatDatabase _database;
@@ -62,8 +68,13 @@ namespace Tomestone.Commands
                 data.Add("user", obj.From.Nick);
                 data.Add("quote", obj.Message);
 
-                var ok = _database.Insert(TableType.QUOTE, data);
-                if (ok) _chat.SendStatus(Main.chatMain, "-" + obj.Message + "- succesfully quoted!");
+                // search for a duplicate if it exists
+                var results = _database.SearchBy(TableType.QUOTE, "quote", obj.Message);
+                if (results == null)
+                {
+                    var ok = _database.Insert(TableType.QUOTE, data);
+                    if (ok) _chat.SendStatus(Main.chatMain, "-" + obj.Message + "- succesfully quoted!");                    
+                }
                 return;
             }
             _chat.SendStatus(Main.chatMain, "Message not found.");
@@ -74,10 +85,18 @@ namespace Tomestone.Commands
             switch (subject)
             {
                 case "tome":
-                    _chat.SendStatus(Main.chatMain, "http://www.simplively.com/blog/2014/02/02/tomestone/");
+                    if (DateTime.Now > helpTomeCooldown)
+                    {
+                        _chat.SendStatus(Main.chatMain, "http://www.simplively.com/blog/2014/02/02/tomestone/");
+                        helpTomeCooldown = DateTime.Now + _nextHelpCooldown;
+                    }
                     break;
                 case "dragon":
-                    _chat.SendStatus(Main.chatMain, "http://www.simplively.com/blog/2014/02/02/the-dragon-game/");
+                    if (DateTime.Now > helpDragonCooldown)
+                    {
+                        _chat.SendStatus(Main.chatMain, "http://www.simplively.com/blog/2014/02/02/the-dragon-game/");
+                        helpDragonCooldown = DateTime.Now + _nextHelpCooldown;
+                    }
                     break;
             }
         }
@@ -139,6 +158,12 @@ namespace Tomestone.Commands
 
         public void ExecuteSpecialCommand(string command)
         {
+            if (command.CompareTo("raid") == 0) 
+            {
+               if(DateTime.Now < raidCooldown) return;
+               else raidCooldown = DateTime.Now + _nextHelpCooldown;
+            }
+            
             var obj = _database.GetRandomBy(TableType.SPECIAL, "command", command);
 
             _chat.SentMessages.Add(obj);
