@@ -44,6 +44,8 @@ namespace Tomestone.Models
             Main.Db.SafeQuery("CREATE TABLE IF NOT EXISTS repeats ( repeatId INTEGER PRIMARY KEY AUTOINCREMENT, user NOT NULL, time NOT NULL, message NOT NULL);");
             Main.Db.SafeQuery("CREATE TABLE IF NOT EXISTS replies ( replyId INTEGER PRIMARY KEY AUTOINCREMENT, user NOT NULL, [trigger] NOT NULL, reply NOT NULL, CONSTRAINT 'uc_message' UNIQUE ( [trigger], reply ));");
             Main.Db.SafeQuery("CREATE TABLE IF NOT EXISTS special_commands ( specialId INTEGER PRIMARY KEY AUTOINCREMENT, user NOT NULL, command NOT NULL, reply NOT NULL );");
+            // user database for tracking optout of quotes
+            Main.Db.SafeQuery("CREATE TABLE IF NOT EXISTS users ( userId INTEGER PRIMARY KEY AUTOINCREMENT, user NOT NULL, optOut NOT NULL );");
 
             var results = Main.Db.Query("SELECT * FROM login", new Dictionary<string, string>());
 

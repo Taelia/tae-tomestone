@@ -95,6 +95,12 @@ namespace Tomestone.Chatting
                 case "!highlight":
                     ParseHighlight(channel, from, message);
                     break;
+                case "!optout":
+                    ParseOptout(channel, from);
+                    break;
+                case "!optin":
+                    ParseOptin(channel, from);
+                    break;
                 default:
                     ParseSpecial(channel, from, message);
                     break;
@@ -103,6 +109,7 @@ namespace Tomestone.Chatting
 
         public void ParseDefaultCommands(Channel channel, IrcUser from, string message, string command)
         {
+            Quote(channel, from, message);
             Reply(channel, from, message);
         }
 
@@ -339,9 +346,12 @@ namespace Tomestone.Chatting
 
             if (match.Success)
             {
-                string user = match.Groups[1].ToString().ToLower();
+                
+                //string user = match.Groups[1].ToString().ToLower();
 
-                userCommands.ExecuteGetCommand("quote", user);
+                //userCommands.ExecuteGetCommand("quote", user);
+
+                _chat.SendStatus(Main.chatMain, "This function has been removed. Tome will now display quotes randomly");
                 return;
             }
             else
@@ -396,6 +406,16 @@ namespace Tomestone.Chatting
             _chat.SendStatus(Main.chatMain, "SYNTAX: '!highlight A' where A is a short description of the highlight you want to suggest.");
         }
 
+        public void ParseOptout(Channel channel, IrcUser from)
+        {
+            userCommands.ExecuteOptoutCommand(from.Nick);
+        }
+
+        public void ParseOptin(Channel channel, IrcUser from)
+        {
+            userCommands.ExecuteOptinCommand(from.Nick);
+        }
+
         public void ParseSpecial(Channel channel, IrcUser from, string message)
         {
             Match match = Regex.Match(message, "!([a-zA-Z0-9_]+)$");
@@ -415,6 +435,19 @@ namespace Tomestone.Chatting
             Random r = new Random();
             if (r.Next(0, 100) < 25)
                 defaultCommands.Reply(channel, from, message);
+        }
+
+        public void Quote(Channel channel, IrcUser from, string message)
+        {
+            //chance to quote is 2%
+            Random r = new Random();
+            if (r.Next(0, 100) < 2) 
+            {
+
+                string user = from.Nick.ToLower();
+
+                defaultCommands.Quote(user);
+            }
         }
 
         public void AddUserToBlacklist(string username, DateTime duration)

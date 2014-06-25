@@ -111,21 +111,15 @@ namespace Tomestone.Commands
             }
 
             MessageObject obj = null;
-            switch (type)
+            
+            //Get all commands of type 'type', and then get the id of any random command.
+            obj = _database.GetRandomBy(TableType.COMMAND, "command", type);
+            if (obj == null)
             {
-                case "quote":
-                    obj = _database.GetRandomBy(TableType.QUOTE, "user", from);
-                    break;
-                default:
-                    //Get all commands of type 'type', and then get the id of any random command.
-                    obj = _database.GetRandomBy(TableType.COMMAND, "command", type);
-                    if (obj == null)
-                    {
-                        _chat.SendStatus(Main.chatMain, "Type not found.");
-                        return;
-                    }
-                    break;
+                _chat.SendStatus(Main.chatMain, "Type not found.");
+                return;
             }
+
 
             _nextCooldown = r.Next(10, 15);
             getCooldown = DateTime.Now + TimeSpan.FromMinutes(_nextCooldown);
@@ -178,6 +172,43 @@ namespace Tomestone.Commands
             await Task.Delay(TimeSpan.FromMinutes(30));
 
             _chat.SendStatus(Main.chatMods, from + " suggested a highlight at " + now + "; " + description);
+        }
+
+        public void ExecuteOptoutCommand(string from)
+        {
+            // add an entry into the user table for opting out
+            var data = new Dictionary<string, string>();
+            data.Add("user", from);
+            data.Add("optOut", "true");
+
+            // check if an entry already exists, if it does, just update it instead
+            var results = _database.SearchBy(TableType.USER, "user", from);
+            bool ok = false;
+            if (results != null)
+            {
+                // we expect there to be only 1 result since there shouldnt be more than 1 entry per user
+                ok = _database.Edit(TableType.USER, results[0].Data["userId"], "false", "true");
+                
+            }
+            else
+            {
+                ok = _database.Insert(TableType.USER, data);
+            }
+
+            if (ok) _chat.SendStatus(Main.chatMain, from + " successful.");
+        }
+
+        public void ExecuteOptinCommand(string from)
+        {
+            // check if an entry already exists, if it does, just update it
+            var results = _database.SearchBy(TableType.USER, "user", from);
+            bool ok = false;
+            if (results != null)
+            {
+                // we expect there to be only 1 result since there shouldnt be more than 1 entry per user
+                ok = _database.Edit(TableType.USER, results[0].Data["userId"], "true", "false");
+                _chat.SendStatus(Main.chatMain, from + " successful.");
+            }
         }
 
     }

@@ -19,7 +19,7 @@ using TomeLib.Db;
 
 namespace Tomestone
 {
-    public enum TableType { REPEAT, SPECIAL, COMMAND, REPLY, QUOTE, QUESTION, ERROR };
+    public enum TableType { REPEAT, SPECIAL, COMMAND, REPLY, QUOTE, QUESTION, USER, ERROR };
 
     public class ChatDatabase
     {
@@ -42,6 +42,7 @@ namespace Tomestone
                 case TableType.REPLY: return new ReplyTable();
                 case TableType.QUOTE: return new QuoteTable();
                 case TableType.QUESTION: return new QuestionTable();
+                case TableType.USER: return new UserTable();
             }
             return null;
         }
@@ -55,6 +56,7 @@ namespace Tomestone
                 case "reply": return TableType.REPLY;
                 case "quote": return TableType.QUOTE;
                 case "question": return TableType.QUESTION;
+                case "user": return TableType.USER;
             }
             return TableType.ERROR;
         }
@@ -100,6 +102,20 @@ namespace Tomestone
             parms.Add("@Id", id);
 
             var ok = _db.Delete(type.TableName, "@IdName = '@Id'", parms);
+            if (!ok) return false;
+
+            return true;
+        }
+
+        public bool DeleteByUsername(TableType table, string username)
+        {
+            var type = GetTable(table);
+
+            var parms = new Dictionary<string, string>();
+            parms.Add("@ColumnName", "user");
+            parms.Add("@Username", username);
+
+            var ok = _db.Delete(type.TableName, "@ColumnName = '@Username'", parms);
             if (!ok) return false;
 
             return true;
@@ -338,6 +354,20 @@ namespace Tomestone
             // furthermore, a length of 1 indicates trigger request.
             if (result.ItemArray.Length > 1) return result["reply"].ToString();
             else return result["trigger"].ToString();           
+        }
+    }
+
+    public class UserTable : Table
+    {
+        public override string Name { get { return "User"; } }
+        public override string TableName { get { return "users"; } }
+        public override string IdName { get { return "userId"; } }
+        public override string EditName { get { return "optout"; } }
+
+        public override string Message(DataRow result)
+        {
+            var reply = result["optout"].ToString();
+            return reply;
         }
     }
 
