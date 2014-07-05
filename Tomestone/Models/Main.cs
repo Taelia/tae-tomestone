@@ -14,12 +14,12 @@ namespace Tomestone.Models
     {
         public MainViewModel View;
 
-        public Irc Chat;
+        public TomeChat Chat;
 
         public static Database Db { get { return Database.GetDatabase("tomestone.db"); } }
 
         //private string botName = "Tomestone";
-        //private string botOauth = "oauth:e1dmmpdsq34uppmhxdbqmhbesja6osr";
+        //private string botOauth = "oauth:npafwpg44j0a5iullxo2dt385n5jeco";
 
 
         public static string chatMain = "#taelia_";
@@ -79,7 +79,7 @@ namespace Tomestone.Models
             chatMain = View.Main;
             chatMods = View.Mods;
 
-            Chat = new Irc(View.Login, View.OAuth, new string[] {View.Main, View.Mods}, new TomeChat());
+            Chat = new TomeChat(View.Login, View.OAuth, chatMain, chatMods);
         }
 
         private void RememberCredentials()

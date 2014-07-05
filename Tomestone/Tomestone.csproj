@@ -97,6 +97,8 @@
     </ApplicationDefinition>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="ChatDatabase.cs" />
+    <Compile Include="Chatting\History.cs" />
+    <Compile Include="Chatting\Message.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="Views\MainView.xaml.cs">
       <DependentUpon>MainView.xaml</DependentUpon>

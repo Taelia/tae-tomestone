@@ -15,7 +15,7 @@ using Tomestone.Models;
 
 namespace Tomestone.Chatting
 {
-    public partial class TomeChat : IChat
+    public partial class TomeChat : ChatBase
     {
         private ParseCommands _parse;
 
@@ -29,8 +29,13 @@ namespace Tomestone.Chatting
 
         private DispatcherTimer _timer;
 
-        public TomeChat()
+        public static IrcUser Self;
+
+        public TomeChat(string login, string pass, string main, string mods)
+            : base(new Irc(login, pass, new[] { main, mods }))
         {
+            Self = Client.GetIrcUser(login);
+
             SentMessages = new History();
             ReceivedMessages = new History();
 
@@ -52,11 +57,11 @@ namespace Tomestone.Chatting
         }
 
 
-        public void OnMessage(Channel channel, IrcUser from, string message)
+        protected override void OnMessage(Channel channel, IrcUser from, string message)
         {
             try
             {
-                var obj = new MessageObject(from, message);
+                var obj = new ChatMessage(from, message);
 
                 //Check against first word how to handle the message
                 var command = message.TrimStart(' ').Split(' ')[0];
@@ -80,21 +85,22 @@ namespace Tomestone.Chatting
             }
         }
 
-        public void OnAction(Channel channel, IrcUser from, string message)
+        protected override void OnAction(Channel channel, IrcUser from, string message)
         {
             //Treat the same as messages.
             OnMessage(channel, from, message);
         }
 
-        public void OnJoin(Channel channel, string from)
+        protected override void OnJoin(Channel channel, string from)
         {
         }
 
         //Part and Quit don't work properly on Twitch
-        public void OnPart(Channel channel, string from)
+        protected override void OnPart(Channel channel, string from)
         {
         }
-        public void OnQuit(Channel channel, string from)
+
+        protected override void OnQuit(Channel channel, string from)
         {
             //Treat the same as parts.
             OnPart(channel, from);

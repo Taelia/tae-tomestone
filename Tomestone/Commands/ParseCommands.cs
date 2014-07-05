@@ -15,7 +15,7 @@ namespace Tomestone.Chatting
 {
     public class ParseCommands
     {
-        private IChat _chat;
+        private TomeChat _chat;
 
         private AdminCommands adminCommands;
         private UserCommands userCommands;
@@ -155,7 +155,7 @@ namespace Tomestone.Chatting
         /// <summary>
         /// Allow user to store a quote from someone.
         /// </summary>
-        public void ParseQuote(Channel channel, string message)
+        public void ParseQuote(Channel channel, IrcUser from, string message)
         {
             Match match = Regex.Match(message, "!quote (.+?) (.+)");
 
@@ -164,12 +164,31 @@ namespace Tomestone.Chatting
                 string user = match.Groups[1].ToString();
                 string search = match.Groups[2].ToString();
 
-                userCommands.ExecuteQuoteCommand(user, search);
+                userCommands.ExecuteQuoteCommand(user, search, from.Nick);
 
                 return;
             }
 
             _chat.SendStatus(Main.chatMain, "SYNTAX: '!quote A B' where A is the username, B is a word within the sentence you want to quote.");
+        }
+
+        /// <summary>
+        /// Allow user to store a quote from the streamer.
+        /// </summary>
+        public void ParseSuperQuote(Channel channel, IrcUser from, string message)
+        {
+            Match match = Regex.Match(message, "!superquote (.+)");
+
+            if (match.Success)
+            {
+                string quote = match.Groups[1].ToString();
+
+                userCommands.ExecuteSuperQuoteCommand(channel.Name.Substring(1), quote, from.Nick);
+
+                return;
+            }
+
+            _chat.SendStatus(Main.chatMain, "SYNTAX: '!superquote A' where A is something the streamer said.");
         }
 
         public void ParseHelp(Channel channel, string message)
@@ -211,8 +230,10 @@ namespace Tomestone.Chatting
                     
                     //If the user wants a quote but didn't supply a username, give the Syntax message.
                     if (type != "quote")
+                    {
                         userCommands.ExecuteGetCommand(type);
-                    return;
+                        return;
+                    }
                 }
             }
 

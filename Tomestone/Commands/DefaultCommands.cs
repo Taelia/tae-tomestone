@@ -26,7 +26,7 @@ namespace Tomestone.Commands
             _database = database;
         }
 
-        private MessageObject PickRandomReply(List<MessageObject> results)
+        private ChatMessage PickRandomReply(List<ChatMessage> results)
         {
             //Where the reply is not in the list of replies, or if it is, where 10 minutes have passed since it's been put in there.
             var list = results.Where(x => !(_replies.ContainsKey(x.Message)) || DateTime.Now > _replies[x.Message] + TimeSpan.FromMinutes(10)).ToArray();

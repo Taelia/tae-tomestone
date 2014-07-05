@@ -52,21 +52,40 @@ namespace Tomestone.Commands
             if (ok) _chat.SendStatus(Main.chatMain, "-" + reply + "- succesfully added!");
         }
 
-        public void ExecuteQuoteCommand(string user, string search)
+        public void ExecuteQuoteCommand(string user, string search, string by)
         {
+            if (user == by)
+            {
+                _chat.SendStatus(Main.chatMain, "Don't quote yourself, silly.");
+                return;
+            }
             //Get the latest message from user containing the search string.
             var obj = _chat.ReceivedMessages.Search(user, search);
             if (obj != null)
             {
-                var data = new Dictionary<string, string>();
-                data.Add("user", obj.From.Nick);
-                data.Add("quote", obj.Message);
-
-                var ok = _database.Insert(TableType.QUOTE, data);
-                if (ok) _chat.SendStatus(Main.chatMain, "-" + obj.Message + "- succesfully quoted!");
+                //!!! SuperQuoteCommand just coincidentally happens to have this exact piece of code. Be careful when changing.
+                ExecuteSuperQuoteCommand(obj.From.Nick, obj.Message, by);
                 return;
             }
             _chat.SendStatus(Main.chatMain, "Message not found.");
+        }
+
+        //!!! Read comment in ExecuteQuoteCommand. This bit may require cleaner code.
+        public void ExecuteSuperQuoteCommand(string user, string quote, string by)
+        {
+            var data = new Dictionary<string, string>();
+            data.Add("user", user);
+            data.Add("quote", quote);
+            data.Add("quotedBy", by);
+
+            var ok = _database.Insert(TableType.QUOTE, data);
+            if (ok)
+            {
+                var newObj = _database.NewestEntry(TableType.QUOTE);
+                _chat.SentMessages.Add(newObj);
+                _chat.SendStatus(Main.chatMain, "-" + quote + "- succesfully quoted!");
+            }
+            return;
         }
 
         public void ExecuteHelpCommand(string subject)
@@ -82,6 +101,7 @@ namespace Tomestone.Commands
             }
         }
 
+        //This method really requires rewriting.
         public void ExecuteGetCommand(string type, string from = null)
         {
             if (DateTime.Now < getCooldown)
@@ -91,7 +111,7 @@ namespace Tomestone.Commands
                 return;
             }
 
-            MessageObject obj = null;
+            ChatMessage obj = null;
             switch (type)
             {
                 case "quote":
@@ -108,7 +128,12 @@ namespace Tomestone.Commands
                     break;
             }
 
-            _nextCooldown = r.Next(10, 15);
+            _nextCooldown = r.Next(3, 7);
+            if (type == "quote" && obj == null)
+            {
+                _chat.SendStatus(Main.chatMain, from + " has no quotes.");
+                return;
+            }
             getCooldown = DateTime.Now + TimeSpan.FromMinutes(_nextCooldown);
 
             _chat.SentMessages.Add(obj);

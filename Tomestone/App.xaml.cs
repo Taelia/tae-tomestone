@@ -28,7 +28,6 @@ namespace Tomestone
         void App_Exit(object sender, ExitEventArgs e)
         {
             Environment.Exit(1);
-            Irc.Exit();
         }
     }
 }

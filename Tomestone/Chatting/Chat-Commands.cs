@@ -48,7 +48,10 @@ namespace Tomestone.Chatting
                     _parse.ParseTeach(channel, from, message);
                     break;
                 case "!quote":
-                    _parse.ParseQuote(channel, message);
+                    _parse.ParseQuote(channel, from, message);
+                    break;
+                case "!superquote":
+                    _parse.ParseSuperQuote(channel, from, message);
                     break;
                 case "!help":
                     _parse.ParseHelp(channel, message);
@@ -71,7 +74,7 @@ namespace Tomestone.Chatting
         public void DefaultCommands(Channel channel, IrcUser from, string message, string command)
         {
             _parse.Reply(channel, from, message);
-            ReceivedMessages.Add(new MessageObject(from, message));
+            ReceivedMessages.Add(new ChatMessage(from, message));
         }
     }
 }

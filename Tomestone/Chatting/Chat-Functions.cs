@@ -10,8 +10,8 @@ namespace Tomestone.Chatting
     public partial class TomeChat
     {
         public void SendStatus(string channel, string message)
-        { Irc.SendMessage("/me :: " + message, channel); }
-        public void SendMessage(string channel, string message)
-        { Irc.SendMessage(message, channel); }
+        {
+            SendAction(channel, ":: " + message);
+        }
     }
 }
