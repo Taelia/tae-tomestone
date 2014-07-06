@@ -62,12 +62,12 @@ namespace Tomestone.Commands
 
             //Finally, send the message.
             _chat.SendMessage(channel.Name, reply);
-            _chat.ReceivedMessages.Add(new MessageObject(from, message));
+            _chat.ReceivedMessages.Add(new ChatMessage(from, message));
         }
 
         public void Quote(string from = null)
         {
-            MessageObject obj = null;
+            ChatMessage obj = null;
 
             // first check if the user has opted out
             var results = _database.SearchBy(TableType.USER, "user", from);

@@ -58,7 +58,7 @@ namespace Tomestone.Commands
             if (ok) _chat.SendStatus(Main.chatMain, "-" + reply + "- succesfully added!");
         }
 
-        public void ExecuteQuoteCommand(string user, string search)
+        public void ExecuteQuoteCommand(string user, string search, string from)
         {
             //Get the latest message from user containing the search string.
             var obj = _chat.ReceivedMessages.Search(user, search);
@@ -67,6 +67,7 @@ namespace Tomestone.Commands
                 var data = new Dictionary<string, string>();
                 data.Add("user", obj.From.Nick);
                 data.Add("quote", obj.Message);
+                data.Add("quotedBy", from);
 
                 // search for a duplicate if it exists
                 var results = _database.SearchBy(TableType.QUOTE, "quote", obj.Message);
@@ -110,7 +111,7 @@ namespace Tomestone.Commands
                 return;
             }
 
-            MessageObject obj = null;
+            ChatMessage obj = null;
             
             //Get all commands of type 'type', and then get the id of any random command.
             obj = _database.GetRandomBy(TableType.COMMAND, "command", type);

@@ -121,7 +121,7 @@ namespace Tomestone
             return true;
         }
 
-        public MessageObject GetById(TableType table, string id)
+        public ChatMessage GetById(TableType table, string id)
         {
             var type = GetTable(table);
 
@@ -139,7 +139,7 @@ namespace Tomestone
             return CreateObject(table, result);
         }
 
-        public MessageObject NewestEntry(TableType table)
+        public ChatMessage NewestEntry(TableType table)
         {
             var type = GetTable(table);
 
@@ -157,7 +157,7 @@ namespace Tomestone
             return obj;
         }
 
-        public MessageObject GetRandom(TableType table)
+        public ChatMessage GetRandom(TableType table)
         {
             var type = GetTable(table);
 
@@ -177,7 +177,7 @@ namespace Tomestone
         }
 
         // returns all entries in a table based on a column type and a text field
-        public List<MessageObject> SearchBy(TableType table, string columnName, string search)
+        public List<ChatMessage> SearchBy(TableType table, string columnName, string search)
         {
             var type = GetTable(table);
 
@@ -203,14 +203,14 @@ namespace Tomestone
             }
 
             //If results found, convert to a list of messages.
-            var list = new List<MessageObject>();
+            var list = new List<ChatMessage>();
             foreach (DataRow r in results.Rows)
                 list.Add(CreateObject(table, r));
             return list;
         }
 
         // An interface function implemented to obtain all unique values of the specified column
-        public List<MessageObject> GetDistinctByCol(TableType table, string columnName)
+        public List<ChatMessage> GetDistinctByCol(TableType table, string columnName)
         {
             var type = GetTable(table);
 
@@ -223,21 +223,21 @@ namespace Tomestone
             if (results.Rows.Count == 0) return null;
 
             //If results found, convert to a list of messages.
-            var list = new List<MessageObject>();
+            var list = new List<ChatMessage>();
             foreach (DataRow r in results.Rows)
                 list.Add(CreateObject(table, r));
             return list;
         }
 
-        public MessageObject CreateObject(TableType table, DataRow result)
+        public ChatMessage CreateObject(TableType table, DataRow result)
         {
             var type = GetTable(table);
             var message = type.Message(result);
 
-            return new MessageObject(Irc.Self, message, result);
+            return new ChatMessage(TomeChat.Self, message, result);
         }
 
-        public MessageObject GetRandomBy(TableType table, string columnName, string search)
+        public ChatMessage GetRandomBy(TableType table, string columnName, string search)
         {
             var searchBy = SearchBy(table, columnName, search);
             if (searchBy == null) return null;

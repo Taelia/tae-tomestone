@@ -14,7 +14,8 @@ namespace Tomestone.Models
     {
         public MainViewModel View;
 
-        public Irc Chat;
+
+        public TomeChat Chat;
 
         public static Database Db { get { return Database.GetDatabase("tomestone.db"); } }
 
@@ -81,7 +82,7 @@ namespace Tomestone.Models
             chatMain = View.Main;
             chatMods = View.Mods;
 
-            Chat = new Irc(View.Login, View.OAuth, new string[] {View.Main, View.Mods}, new TomeChat());
+            Chat = new TomeChat(View.Login, View.OAuth, View.Main, View.Mods);
         }
 
         private void RememberCredentials()

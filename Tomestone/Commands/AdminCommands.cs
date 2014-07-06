@@ -160,7 +160,7 @@ namespace Tomestone.Commands
 
         private void CheckReplies(string args)
         {
-            List<MessageObject> results = null;
+            List<ChatMessage> results = null;
             string message = "";
 
             // there are two cases for looking up replies. 
@@ -175,7 +175,7 @@ namespace Tomestone.Commands
                 if (results != null) 
                 {
                     // return a list of tiggers
-                    foreach (MessageObject entry in results)
+                    foreach (ChatMessage entry in results)
                     {
                         message = message + entry.Message + " | ";
                     }
@@ -200,7 +200,7 @@ namespace Tomestone.Commands
 
         private void CheckQuotes(string args)
         {
-            List<MessageObject> results = null;
+            List<ChatMessage> results = null;
             string message = "";
 
             // Cases for quote seaching:
@@ -244,7 +244,7 @@ namespace Tomestone.Commands
             _chat.SendStatus(Main.chatMods, "not implemented");
         }
 
-        private void FormatCheckOutput(string message, List<MessageObject> results, TableType type)
+        private void FormatCheckOutput(string message, List<ChatMessage> results, TableType type)
         {
             // need to do additional checks here to format output according to number of results.
 
@@ -263,7 +263,7 @@ namespace Tomestone.Commands
                 else if (results.Count <= 10)
                 {
                     // return a list of ID+content
-                    foreach (MessageObject entry in results)
+                    foreach (ChatMessage entry in results)
                     {
                         message = message + entry.Data[table.IdName] + ": " + entry.Message + " | ";
                     }
@@ -271,7 +271,7 @@ namespace Tomestone.Commands
                 else
                 {
                     // return a list of IDs
-                    foreach (MessageObject entry in results)
+                    foreach (ChatMessage entry in results)
                     {
                         message = message + entry.Data[table.IdName] + " | ";
                     }

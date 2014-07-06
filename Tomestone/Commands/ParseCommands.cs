@@ -81,7 +81,7 @@ namespace Tomestone.Chatting
                     ParseTeach(channel, from, message);
                     break;
                 case "!quote":
-                    ParseQuote(channel, message);
+                    ParseQuote(channel, from, message);
                     break;
                 case "!help":
                     ParseHelp(channel, message);
@@ -334,7 +334,7 @@ namespace Tomestone.Chatting
             {
                 string quote = match.Groups[1].ToString();
 
-                userCommands.ExecuteSuperQuoteCommand(channel.Name.Substring(1), quote, from.Nick);
+                userCommands.ExecuteQuoteCommand(channel.Name.Substring(1), quote, from.Nick);
 
                 return;
             }
