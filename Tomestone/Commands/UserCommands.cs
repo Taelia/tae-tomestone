@@ -16,6 +16,12 @@ namespace Tomestone.Commands
         private Random r = new Random();
         private DateTime getCooldown = DateTime.Now;
         private int _nextCooldown;
+        
+        private DateTime helpDragonCooldown = DateTime.Now;
+        private DateTime helpTomeCooldown = DateTime.Now;
+        private DateTime raidCooldown = DateTime.Now;
+        private TimeSpan _nextHelpCooldown = TimeSpan.FromMinutes(2);
+        
 
         private TomeChat _chat;
         private ChatDatabase _database;
@@ -52,40 +58,26 @@ namespace Tomestone.Commands
             if (ok) _chat.SendStatus(Main.chatMain, "-" + reply + "- succesfully added!");
         }
 
-        public void ExecuteQuoteCommand(string user, string search, string by)
+        public void ExecuteQuoteCommand(string user, string search)
         {
-            if (user == by)
-            {
-                _chat.SendStatus(Main.chatMain, "Don't quote yourself, silly.");
-                return;
-            }
             //Get the latest message from user containing the search string.
             var obj = _chat.ReceivedMessages.Search(user, search);
             if (obj != null)
             {
-                //!!! SuperQuoteCommand just coincidentally happens to have this exact piece of code. Be careful when changing.
-                ExecuteSuperQuoteCommand(obj.From.Nick, obj.Message, by);
+                var data = new Dictionary<string, string>();
+                data.Add("user", obj.From.Nick);
+                data.Add("quote", obj.Message);
+
+                // search for a duplicate if it exists
+                var results = _database.SearchBy(TableType.QUOTE, "quote", obj.Message);
+                if (results == null)
+                {
+                    var ok = _database.Insert(TableType.QUOTE, data);
+                    if (ok) _chat.SendStatus(Main.chatMain, "-" + obj.Message + "- succesfully quoted!");                    
+                }
                 return;
             }
             _chat.SendStatus(Main.chatMain, "Message not found.");
-        }
-
-        //!!! Read comment in ExecuteQuoteCommand. This bit may require cleaner code.
-        public void ExecuteSuperQuoteCommand(string user, string quote, string by)
-        {
-            var data = new Dictionary<string, string>();
-            data.Add("user", user);
-            data.Add("quote", quote);
-            data.Add("quotedBy", by);
-
-            var ok = _database.Insert(TableType.QUOTE, data);
-            if (ok)
-            {
-                var newObj = _database.NewestEntry(TableType.QUOTE);
-                _chat.SentMessages.Add(newObj);
-                _chat.SendStatus(Main.chatMain, "-" + quote + "- succesfully quoted!");
-            }
-            return;
         }
 
         public void ExecuteHelpCommand(string subject)
@@ -93,15 +85,22 @@ namespace Tomestone.Commands
             switch (subject)
             {
                 case "tome":
-                    _chat.SendStatus(Main.chatMain, "http://www.simplively.com/blog/2014/02/02/tomestone/");
+                    if (DateTime.Now > helpTomeCooldown)
+                    {
+                        _chat.SendStatus(Main.chatMain, "http://www.simplively.com/blog/2014/02/02/tomestone/");
+                        helpTomeCooldown = DateTime.Now + _nextHelpCooldown;
+                    }
                     break;
                 case "dragon":
-                    _chat.SendStatus(Main.chatMain, "http://www.simplively.com/blog/2014/02/02/the-dragon-game/");
+                    if (DateTime.Now > helpDragonCooldown)
+                    {
+                        _chat.SendStatus(Main.chatMain, "http://www.simplively.com/blog/2014/02/02/the-dragon-game/");
+                        helpDragonCooldown = DateTime.Now + _nextHelpCooldown;
+                    }
                     break;
             }
         }
 
-        //This method really requires rewriting.
         public void ExecuteGetCommand(string type, string from = null)
         {
             if (DateTime.Now < getCooldown)
@@ -111,29 +110,18 @@ namespace Tomestone.Commands
                 return;
             }
 
-            ChatMessage obj = null;
-            switch (type)
+            MessageObject obj = null;
+            
+            //Get all commands of type 'type', and then get the id of any random command.
+            obj = _database.GetRandomBy(TableType.COMMAND, "command", type);
+            if (obj == null)
             {
-                case "quote":
-                    obj = _database.GetRandomBy(TableType.QUOTE, "user", from);
-                    break;
-                default:
-                    //Get all commands of type 'type', and then get the id of any random command.
-                    obj = _database.GetRandomBy(TableType.COMMAND, "command", type);
-                    if (obj == null)
-                    {
-                        _chat.SendStatus(Main.chatMain, "Type not found.");
-                        return;
-                    }
-                    break;
-            }
-
-            _nextCooldown = r.Next(3, 7);
-            if (type == "quote" && obj == null)
-            {
-                _chat.SendStatus(Main.chatMain, from + " has no quotes.");
+                _chat.SendStatus(Main.chatMain, "Type not found.");
                 return;
             }
+
+
+            _nextCooldown = r.Next(10, 15);
             getCooldown = DateTime.Now + TimeSpan.FromMinutes(_nextCooldown);
 
             _chat.SentMessages.Add(obj);
@@ -164,6 +152,12 @@ namespace Tomestone.Commands
 
         public void ExecuteSpecialCommand(string command)
         {
+            if (command.CompareTo("raid") == 0) 
+            {
+               if(DateTime.Now < raidCooldown) return;
+               else raidCooldown = DateTime.Now + _nextHelpCooldown;
+            }
+            
             var obj = _database.GetRandomBy(TableType.SPECIAL, "command", command);
 
             _chat.SentMessages.Add(obj);
@@ -178,6 +172,43 @@ namespace Tomestone.Commands
             await Task.Delay(TimeSpan.FromMinutes(30));
 
             _chat.SendStatus(Main.chatMods, from + " suggested a highlight at " + now + "; " + description);
+        }
+
+        public void ExecuteOptoutCommand(string from)
+        {
+            // add an entry into the user table for opting out
+            var data = new Dictionary<string, string>();
+            data.Add("user", from);
+            data.Add("optOut", "true");
+
+            // check if an entry already exists, if it does, just update it instead
+            var results = _database.SearchBy(TableType.USER, "user", from);
+            bool ok = false;
+            if (results != null)
+            {
+                // we expect there to be only 1 result since there shouldnt be more than 1 entry per user
+                ok = _database.Edit(TableType.USER, results[0].Data["userId"], "false", "true");
+                
+            }
+            else
+            {
+                ok = _database.Insert(TableType.USER, data);
+            }
+
+            if (ok) _chat.SendStatus(Main.chatMain, from + " successful.");
+        }
+
+        public void ExecuteOptinCommand(string from)
+        {
+            // check if an entry already exists, if it does, just update it
+            var results = _database.SearchBy(TableType.USER, "user", from);
+            bool ok = false;
+            if (results != null)
+            {
+                // we expect there to be only 1 result since there shouldnt be more than 1 entry per user
+                ok = _database.Edit(TableType.USER, results[0].Data["userId"], "true", "false");
+                _chat.SendStatus(Main.chatMain, from + " successful.");
+            }
         }
 
     }

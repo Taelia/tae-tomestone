@@ -14,12 +14,12 @@ namespace Tomestone.Models
     {
         public MainViewModel View;
 
-        public TomeChat Chat;
+        public Irc Chat;
 
         public static Database Db { get { return Database.GetDatabase("tomestone.db"); } }
 
         //private string botName = "Tomestone";
-        //private string botOauth = "oauth:npafwpg44j0a5iullxo2dt385n5jeco";
+        //private string botOauth = "oauth:e1dmmpdsq34uppmhxdbqmhbesja6osr";
 
 
         public static string chatMain = "#taelia_";
@@ -44,6 +44,8 @@ namespace Tomestone.Models
             Main.Db.SafeQuery("CREATE TABLE IF NOT EXISTS repeats ( repeatId INTEGER PRIMARY KEY AUTOINCREMENT, user NOT NULL, time NOT NULL, message NOT NULL);");
             Main.Db.SafeQuery("CREATE TABLE IF NOT EXISTS replies ( replyId INTEGER PRIMARY KEY AUTOINCREMENT, user NOT NULL, [trigger] NOT NULL, reply NOT NULL, CONSTRAINT 'uc_message' UNIQUE ( [trigger], reply ));");
             Main.Db.SafeQuery("CREATE TABLE IF NOT EXISTS special_commands ( specialId INTEGER PRIMARY KEY AUTOINCREMENT, user NOT NULL, command NOT NULL, reply NOT NULL );");
+            // user database for tracking optout of quotes
+            Main.Db.SafeQuery("CREATE TABLE IF NOT EXISTS users ( userId INTEGER PRIMARY KEY AUTOINCREMENT, user NOT NULL, optOut NOT NULL );");
 
             var results = Main.Db.Query("SELECT * FROM login", new Dictionary<string, string>());
 
@@ -79,7 +81,7 @@ namespace Tomestone.Models
             chatMain = View.Main;
             chatMods = View.Mods;
 
-            Chat = new TomeChat(View.Login, View.OAuth, chatMain, chatMods);
+            Chat = new Irc(View.Login, View.OAuth, new string[] {View.Main, View.Mods}, new TomeChat());
         }
 
         private void RememberCredentials()

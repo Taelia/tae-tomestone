@@ -62,6 +62,26 @@ namespace Tomestone.Commands
 
             //Finally, send the message.
             _chat.SendMessage(channel.Name, reply);
+            _chat.ReceivedMessages.Add(new MessageObject(from, message));
+        }
+
+        public void Quote(string from = null)
+        {
+            MessageObject obj = null;
+
+            // first check if the user has opted out
+            var results = _database.SearchBy(TableType.USER, "user", from);
+
+            if (results != null)
+            {
+                // we expect there to be only 1 result since there shouldnt be more than 1 entry per user
+                if (results[0].Message.CompareTo("true") == 0) return;
+            }
+
+            obj = _database.GetRandomBy(TableType.QUOTE, "user", from);
+            
+            _chat.SentMessages.Add(obj);
+            _chat.SendStatus(Main.chatMain, obj.Message);
         }
 
         public void ExecuteRepeatCommand(string time)

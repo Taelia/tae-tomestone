@@ -1,5 +1,4 @@
-﻿using Meebey.SmartIrc4net;
-using TomeLib.Irc;
+﻿using TomeLib.Irc;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -9,11 +8,18 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Tomestone.Chatting;
 using TomeLib.Db;
-using Tomestone.Models;
+
+/*** NOTES
+ * future changes: 
+ * - restructure the database interface to use 1 tabletype instead of having to create a new object structure for each new table
+ *   that is added. Goal: get rid of hardcoding.
+ *   Could implement a generic 'table' class that will work on all of the above, and return 'null' if the table happens to miss 
+ *   one of these fields for said field.
+ */
 
 namespace Tomestone
 {
-    public enum TableType { REPEAT, SPECIAL, COMMAND, REPLY, QUOTE, QUESTION, ERROR };
+    public enum TableType { REPEAT, SPECIAL, COMMAND, REPLY, QUOTE, QUESTION, USER, ERROR };
 
     public class ChatDatabase
     {
@@ -36,6 +42,7 @@ namespace Tomestone
                 case TableType.REPLY: return new ReplyTable();
                 case TableType.QUOTE: return new QuoteTable();
                 case TableType.QUESTION: return new QuestionTable();
+                case TableType.USER: return new UserTable();
             }
             return null;
         }
@@ -49,6 +56,7 @@ namespace Tomestone
                 case "reply": return TableType.REPLY;
                 case "quote": return TableType.QUOTE;
                 case "question": return TableType.QUESTION;
+                case "user": return TableType.USER;
             }
             return TableType.ERROR;
         }
@@ -99,7 +107,21 @@ namespace Tomestone
             return true;
         }
 
-        public ChatMessage GetById(TableType table, string id)
+        public bool DeleteByUsername(TableType table, string username)
+        {
+            var type = GetTable(table);
+
+            var parms = new Dictionary<string, string>();
+            parms.Add("@ColumnName", "user");
+            parms.Add("@Username", username);
+
+            var ok = _db.Delete(type.TableName, "@ColumnName = '@Username'", parms);
+            if (!ok) return false;
+
+            return true;
+        }
+
+        public MessageObject GetById(TableType table, string id)
         {
             var type = GetTable(table);
 
@@ -117,7 +139,7 @@ namespace Tomestone
             return CreateObject(table, result);
         }
 
-        public ChatMessage NewestEntry(TableType table)
+        public MessageObject NewestEntry(TableType table)
         {
             var type = GetTable(table);
 
@@ -135,7 +157,7 @@ namespace Tomestone
             return obj;
         }
 
-        public ChatMessage GetRandom(TableType table)
+        public MessageObject GetRandom(TableType table)
         {
             var type = GetTable(table);
 
@@ -154,7 +176,8 @@ namespace Tomestone
             return obj;
         }
 
-        public List<ChatMessage> SearchBy(TableType table, string columnName, string search)
+        // returns all entries in a table based on a column type and a text field
+        public List<MessageObject> SearchBy(TableType table, string columnName, string search)
         {
             var type = GetTable(table);
 
@@ -180,21 +203,41 @@ namespace Tomestone
             }
 
             //If results found, convert to a list of messages.
-            var list = new List<ChatMessage>();
+            var list = new List<MessageObject>();
             foreach (DataRow r in results.Rows)
                 list.Add(CreateObject(table, r));
             return list;
         }
 
-        public ChatMessage CreateObject(TableType table, DataRow result)
+        // An interface function implemented to obtain all unique values of the specified column
+        public List<MessageObject> GetDistinctByCol(TableType table, string columnName)
+        {
+            var type = GetTable(table);
+
+            //Get the message to be edited
+            var parms = new Dictionary<string, string>();
+            parms.Add("@TableName", type.TableName);
+            parms.Add("@ColName", columnName);
+
+            var results = _db.Query("SELECT DISTINCT @ColName FROM @TableName", parms);
+            if (results.Rows.Count == 0) return null;
+
+            //If results found, convert to a list of messages.
+            var list = new List<MessageObject>();
+            foreach (DataRow r in results.Rows)
+                list.Add(CreateObject(table, r));
+            return list;
+        }
+
+        public MessageObject CreateObject(TableType table, DataRow result)
         {
             var type = GetTable(table);
             var message = type.Message(result);
 
-            return new ChatMessage(TomeChat.Self, message, result);
+            return new MessageObject(Irc.Self, message, result);
         }
 
-        public ChatMessage GetRandomBy(TableType table, string columnName, string search)
+        public MessageObject GetRandomBy(TableType table, string columnName, string search)
         {
             var searchBy = SearchBy(table, columnName, search);
             if (searchBy == null) return null;
@@ -304,7 +347,26 @@ namespace Tomestone
         public override string Message(DataRow result)
         {
             //Create the message for display
-            var reply = result["reply"].ToString();
+
+            // this if clause was added to address the capability of the check
+            // command to query for a list of triggers rather than a list of replies.
+            // When querying for triggers, the DataRow object does not contain a "reply" field
+            // furthermore, a length of 1 indicates trigger request.
+            if (result.ItemArray.Length > 1) return result["reply"].ToString();
+            else return result["trigger"].ToString();           
+        }
+    }
+
+    public class UserTable : Table
+    {
+        public override string Name { get { return "User"; } }
+        public override string TableName { get { return "users"; } }
+        public override string IdName { get { return "userId"; } }
+        public override string EditName { get { return "optout"; } }
+
+        public override string Message(DataRow result)
+        {
+            var reply = result["optout"].ToString();
             return reply;
         }
     }
