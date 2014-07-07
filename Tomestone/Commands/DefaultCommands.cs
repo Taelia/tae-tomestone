@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using TomeLib.Irc;
 using Tomestone.Chatting;
 using Meebey.SmartIrc4net;
+using Tomestone.Databases;
 using Tomestone.Models;
 
 namespace Tomestone.Commands
@@ -26,7 +27,7 @@ namespace Tomestone.Commands
             _database = database;
         }
 
-        private ChatMessage PickRandomReply(List<ChatMessage> results)
+        private TableReply PickRandomReply(List<TableReply> results)
         {
             //Where the reply is not in the list of replies, or if it is, where 10 minutes have passed since it's been put in there.
             var list = results.Where(x => !(_replies.ContainsKey(x.Message)) || DateTime.Now > _replies[x.Message] + TimeSpan.FromMinutes(10)).ToArray();
@@ -49,48 +50,58 @@ namespace Tomestone.Commands
         {
             var search = message;
 
-            var results = _database.SearchBy(TableType.REPLY, "trigger", search);
-            if (results == null) return;
+            var table = _database.Tables["reply"];
 
-            var obj = PickRandomReply(results);
+            var entries = table.SearchBy("trigger", search);
+            if (entries == null) return;
+
+            var obj = PickRandomReply(entries);
             if (obj == null) return;
 
-            _chat.SentMessages.Add(obj);
+            _database.ReplyCache.Add(obj);
 
             //Replace wildcards with their corresponing replacements.
             var reply = obj.Message.Replace("%who", from.Nick);
 
             //Finally, send the message.
             _chat.SendMessage(channel.Name, reply);
-            _chat.ReceivedMessages.Add(new ChatMessage(from, message));
         }
 
         public void Quote(string from = null)
         {
-            ChatMessage obj = null;
+            /*
+            var table = _database.Tables["user"];
 
             // first check if the user has opted out
-            var results = _database.SearchBy(TableType.USER, "user", from);
+            var dataRows = table.SearchBy("trigger", from);
+
+            var results = new List<TomeMessage>();
+            foreach (var dR in dataRows)
+                results.Add(new TomeMessage(new DefaultEntry(dR["id"].ToString(), dR["addedBy"].ToString(), dR["trigger"].ToString(), dR["reply"].ToString())));
 
             if (results != null)
             {
                 // we expect there to be only 1 result since there shouldnt be more than 1 entry per user
                 if (results[0].Message.CompareTo("true") == 0) return;
             }
+            */
+            var table = _database.Tables["quote"];
 
-            obj = _database.GetRandomBy(TableType.QUOTE, "user", from);
+            var entry = table.GetRandomBy("trigger", from);
             
-            _chat.SentMessages.Add(obj);
-            _chat.SendStatus(Main.chatMain, obj.Message);
+            _database.ReplyCache.Add(entry);
+            _chat.SendStatus(Main.chatMain, entry.Message + " -" + from);
         }
 
         public void ExecuteRepeatCommand(string time)
         {
-            var obj = _database.GetRandomBy(TableType.REPEAT, "time", time);
-            if (obj == null) return; 
+            var table = _database.Tables["repeat"];
 
-            _chat.SentMessages.Add(obj);
-            _chat.SendStatus(Main.chatMain, obj.Message);
+            var entry = table.GetRandomBy("trigger", time);
+            if (entry == null) return;
+
+            _database.ReplyCache.Add(entry);
+            _chat.SendStatus(Main.chatMain, entry.Message);
         }
     }
 }

@@ -96,9 +96,27 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="AppBootstrapper.cs" />
-    <Compile Include="ChatDatabase.cs" />
+    <Compile Include="Chatting\IMessage.cs" />
+    <Compile Include="Databases\ReplyTypes.cs" />
+    <Compile Include="Commands\AdminAddCommand.cs" />
+    <Compile Include="Commands\AdminDeleteCommand.cs" />
+    <Compile Include="Commands\AdminEditCommand.cs" />
+    <Compile Include="Commands\AdminEntryCommand.cs" />
+    <Compile Include="Commands\AdminInfoCommand.cs" />
+    <Compile Include="Commands\AdminRepeatCommand.cs" />
+    <Compile Include="Commands\SuperQuoteCommand.cs" />
+    <Compile Include="Commands\UserHighlightCommand.cs" />
+    <Compile Include="Commands\UserQuoteCommand.cs" />
+    <Compile Include="Commands\UserTeachCommand.cs" />
+    <Compile Include="Databases\TableEntry.cs" />
+    <Compile Include="Databases\Table.cs" />
+    <Compile Include="Databases\UserTable.cs" />
+    <Compile Include="Databases\TomeDatabase.cs" />
+    <Compile Include="Chatting\UserMessage.cs" />
     <Compile Include="Chatting\History.cs" />
-    <Compile Include="Chatting\Message.cs" />
+    <Compile Include="Databases\TableReply.cs" />
+    <Compile Include="Commands\ICommand.cs" />
+    <Compile Include="Commands\UserAddCommand.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="Views\MainView.xaml.cs">
       <DependentUpon>MainView.xaml</DependentUpon>

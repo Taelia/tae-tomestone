@@ -1,10 +1,13 @@
-﻿using TomeLib.Irc;
+﻿using System.Data;
+using System.Windows.Input;
+using TomeLib.Irc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Tomestone.Chatting;
+using Tomestone.Databases;
 using Tomestone.Models;
 
 namespace Tomestone.Commands
@@ -23,10 +26,10 @@ namespace Tomestone.Commands
         //searches for a message in sent message history
         public void ExecuteInfoCommand(string search)
         {
-            var obj = _chat.SentMessages.Search(search);
+            var obj = _database.ReplyCache.Last(x => x.Message.Contains(search));
             if (obj != null)
             {
-                var info = obj.Info();
+                var info = obj.PrintInfo();
                 _chat.SendStatus(Main.chatMods, info);
                 return;
             }
@@ -44,11 +47,10 @@ namespace Tomestone.Commands
                 case "reply":
                 case "special":
                 case "repeat":
-                    var table = _database.GetTableType(type);
-                    var obj = _database.GetById(table, id);
-                    if (obj != null)
+                    var entry = _database.Tables[type].GetById(id);
+                    if (entry != null)
                     {
-                        var info = obj.Info();
+                        var info = "";//entry.PrintInfo();
                         _chat.SendStatus(Main.chatMods, info);
                         return;
                     }
@@ -70,12 +72,12 @@ namespace Tomestone.Commands
                 case "question":
                 case "special":
                 case "repeat":
-                    var table = _database.GetTableType(type);
-                    var ok = _database.Edit(table, id, toReplace, replaceWith);
+                    var table = _database.Tables[type];
+                    var ok = _database.Tables[type].Edit(id, toReplace, replaceWith);
                     if (ok)
                     {
-                        var obj = _database.GetById(table, id);
-                        _chat.SendStatus(Main.chatMods, table + " #" + id + "edited: " + obj.Message);
+                        var entry = _database.Tables[type].GetById(id);
+                        _chat.SendStatus(Main.chatMods, type + " #" + id + "edited: " + ""); //entry.PrintInfo());
                     }
                     return;
                 case "quote":
@@ -97,8 +99,7 @@ namespace Tomestone.Commands
                 case "question":
                 case "special":
                 case "repeat":
-                    var table = _database.GetTableType(type);
-                    var ok = _database.Delete(table, id);
+                    var ok = _database.Tables[type].Delete(id);
                     if (ok) _chat.SendStatus(Main.chatMods, type + " #" + id + " deleted.");
                     return;
                 default:
@@ -109,29 +110,18 @@ namespace Tomestone.Commands
 
         public void ExecuteAddCommand(string from, string command, string reply)
         {
-            var data = new Dictionary<string, string>();
-            data.Add("user", from);
-            data.Add("command", command.ToLower());
-            data.Add("reply", reply);
-
-            var ok = _database.Insert(TableType.SPECIAL, data);
+            var ok = _database.Tables["special"].Insert(from, command.ToLower(), reply);
             if (ok) _chat.SendStatus(Main.chatMods, "-" + reply + "- succesfully added!");
         }
 
         public void ExecuteRepeatCommand(string from, string time, string message)
         {
-            var data = new Dictionary<string, string>();
-            data.Add("user", from);
-            data.Add("time", time);
-            data.Add("message", message);
-
-            var ok = _database.Insert(TableType.REPEAT, data);
+            var ok = _database.Tables["repeat"].Insert(from, time, message);
             if (ok) _chat.SendStatus(Main.chatMods, "-" + message + "- succesfully added!");
         }
 
         public void ExecuteCheckCommand(string type, string args)
         {
-            
             switch (type)
             {
                 case "reply":
@@ -160,8 +150,10 @@ namespace Tomestone.Commands
 
         private void CheckReplies(string args)
         {
-            List<ChatMessage> results = null;
+            List<DataRow> results = null;
             string message = "";
+
+            var table = _database.Tables["reply"];
 
             // there are two cases for looking up replies. 
             // 1. if no additional argument is provided, this is treated as a querry for triggers
@@ -169,15 +161,17 @@ namespace Tomestone.Commands
             if (args == null || args == "") // Case 1:
             {
                 // this should return a list of UNIQUE trigger strings
-                results = _database.GetDistinctByCol(TableType.REPLY, "trigger");
-                message = "list of unique triggers: ";
                 
-                if (results != null) 
+                results = _database.UserTable.GetDistinctByCol("trigger");
+                message = "list of unique triggers: ";
+
+                if (results != null)
                 {
                     // return a list of tiggers
-                    foreach (ChatMessage entry in results)
+                    foreach (var entry in results)
                     {
-                        message = message + entry.Message + " | ";
+                        var msg = "uh..";
+                        message = message + msg + " | ";
                     }
                     _chat.SendStatus(Main.chatMods, message);
                 }
@@ -190,18 +184,20 @@ namespace Tomestone.Commands
             else                            // Case 2:
             {
                 // get a list of all replies for the specified trigger (should be in args)
-                results = _database.SearchBy(TableType.REPLY, "trigger", args);
+                table.SearchBy("trigger", args);
                 message = "list of replies for trigger - " + args + ": ";
             }
 
             // prepare output and send it
-            FormatCheckOutput(message, results, TableType.REPLY);
+            FormatCheckOutput(message, new List<TableReply>());
         }
 
         private void CheckQuotes(string args)
         {
-            List<ChatMessage> results = null;
+            var results = new List<TableReply>();
             string message = "";
+
+            var table = _database.Tables["quote"];
 
             // Cases for quote seaching:
             // 1. no argument provided: get ALL quotes (not meaningful)
@@ -214,12 +210,12 @@ namespace Tomestone.Commands
             }
             else // get quotes by a single username
             {
-                results = _database.SearchBy(TableType.QUOTE, "user", args);
+                results = table.SearchBy("user", args);
                 message = "List of quotes for user - " + args + ": ";
             }
 
             // prepare output and send it
-            FormatCheckOutput(message, results, TableType.QUOTE);
+            FormatCheckOutput(message, results);
         }
 
         private void CheckCommand(string args)
@@ -244,36 +240,32 @@ namespace Tomestone.Commands
             _chat.SendStatus(Main.chatMods, "not implemented");
         }
 
-        private void FormatCheckOutput(string message, List<ChatMessage> results, TableType type)
+        private void FormatCheckOutput(string message, List<TableReply> results)
         {
-            // need to do additional checks here to format output according to number of results.
-
             // format results
             if (results != null)
             {
-                var table = _database.GetTable(type);
-
                 //need to format output according to number of results
 
                 if (results.Count == 1)
                 {
                     // return detailed info for the entry
-                    message = message + results[0].Info();
+                    message += results[0].PrintInfo();
                 }
                 else if (results.Count <= 10)
                 {
                     // return a list of ID+content
-                    foreach (ChatMessage entry in results)
+                    foreach (TableReply entry in results)
                     {
-                        message = message + entry.Data[table.IdName] + ": " + entry.Message + " | ";
+                        message += entry.PrintInfo() + " | ";
                     }
                 }
                 else
                 {
                     // return a list of IDs
-                    foreach (ChatMessage entry in results)
+                    foreach (TableReply entry in results)
                     {
-                        message = message + entry.Data[table.IdName] + " | ";
+                        message = message + entry.Id + " | ";
                     }
                 }
                 _chat.SendStatus(Main.chatMods, message);

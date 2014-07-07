@@ -1,23 +1,24 @@
 ﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using TomeLib.Irc;
 
 namespace Tomestone.Chatting
 {
-    public class History
+    public class History<T> where T : IMessage
     {
-        private readonly List<ChatMessage> _history = new List<ChatMessage>();
+        private readonly List<T> _history = new List<T>();
 
-        public void Add(ChatMessage obj)
+        public void Add(T obj)
         {
             _history.Add(obj);
         }
 
-        public void Remove(ChatMessage obj)
+        public void Remove(T obj)
         {
             _history.Remove(obj);
         }
 
-        public ChatMessage Search(string search)
+        public T Search(string search)
         {
             var array = _history.ToArray();
 
@@ -28,10 +29,10 @@ namespace Tomestone.Chatting
                 if (message.Contains(search))
                     return array[i];
             }
-            return null;
+            return default(T);
         }
 
-        public ChatMessage Search(string user, string search)
+        public T Search(string user, string search)
         {
             var array = _history.ToArray();
 
@@ -50,7 +51,7 @@ namespace Tomestone.Chatting
                     return obj;
             }
 
-            return null;
+            return default(T);
         }
     }
 }

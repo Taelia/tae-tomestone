@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Tomestone.Chatting;
+using Tomestone.Databases;
 using Tomestone.Models;
 using System.Data;
 
@@ -54,7 +55,7 @@ namespace Tomestone.Commands
             data.Add("trigger", trigger);
             data.Add("reply", reply);
 
-            var ok = _database.Insert(TableType.REPLY, data);
+            var ok = _database.Tables["reply"].Insert(user, trigger, reply);
             if (ok) _chat.SendStatus(Main.chatMain, "-" + reply + "- succesfully added!");
         }
 
@@ -70,10 +71,10 @@ namespace Tomestone.Commands
                 data.Add("quotedBy", from);
 
                 // search for a duplicate if it exists
-                var results = _database.SearchBy(TableType.QUOTE, "quote", obj.Message);
+                var results = _database.Tables["quote"].SearchBy("quote", obj.Message);
                 if (results == null)
                 {
-                    var ok = _database.Insert(TableType.QUOTE, data);
+                    var ok = _database.Tables["quote"].Insert(from, obj.From.Nick, obj.Message);
                     if (ok) _chat.SendStatus(Main.chatMain, "-" + obj.Message + "- succesfully quoted!");                    
                 }
                 return;
@@ -111,11 +112,11 @@ namespace Tomestone.Commands
                 return;
             }
 
-            ChatMessage obj = null;
-            
+            var table = _database.Tables["command"];
+
             //Get all commands of type 'type', and then get the id of any random command.
-            obj = _database.GetRandomBy(TableType.COMMAND, "command", type);
-            if (obj == null)
+            var entry = table.GetRandomBy("trigger", type);
+            if (entry == null)
             {
                 _chat.SendStatus(Main.chatMain, "Type not found.");
                 return;
@@ -125,30 +126,8 @@ namespace Tomestone.Commands
             _nextCooldown = r.Next(10, 15);
             getCooldown = DateTime.Now + TimeSpan.FromMinutes(_nextCooldown);
 
-            _chat.SentMessages.Add(obj);
-            _chat.SendStatus(Main.chatMain, obj.Message);
-        }
-
-        public void ExecuteAddCommand(string from, string command, string reply)
-        {
-            if (command == "quote")
-            {
-                _chat.SendStatus(Main.chatMain, "Use the !quote command to quote people!");
-                return;
-            }
-
-            var data = new Dictionary<string, string>();
-            data.Add("user", from);
-            data.Add("command", command.ToLower());
-            data.Add("reply", reply);
-
-            var ok = _database.Insert(TableType.COMMAND, data);
-            if (ok)
-            {
-                var obj = _database.NewestEntry(TableType.COMMAND);
-                _chat.SentMessages.Add(obj);
-                _chat.SendStatus(Main.chatMain, "-" + reply + "- succesfully added!");
-            }
+            _database.ReplyCache.Add(entry);
+            _chat.SendStatus(Main.chatMain, entry.Message);
         }
 
         public void ExecuteSpecialCommand(string command)
@@ -158,11 +137,13 @@ namespace Tomestone.Commands
                if(DateTime.Now < raidCooldown) return;
                else raidCooldown = DateTime.Now + _nextHelpCooldown;
             }
-            
-            var obj = _database.GetRandomBy(TableType.SPECIAL, "command", command);
 
-            _chat.SentMessages.Add(obj);
-            _chat.SendStatus(Main.chatMain, obj.Message);
+            var table = _database.Tables["special"];
+
+            var entry = table.GetRandomBy("trigger", command);
+
+            _database.ReplyCache.Add(entry);
+            _chat.SendStatus(Main.chatMain, entry.Message);
         }
 
         public async void ExecuteHighlightCommand(string from, string description)
@@ -177,39 +158,10 @@ namespace Tomestone.Commands
 
         public void ExecuteOptoutCommand(string from)
         {
-            // add an entry into the user table for opting out
-            var data = new Dictionary<string, string>();
-            data.Add("user", from);
-            data.Add("optOut", "true");
-
-            // check if an entry already exists, if it does, just update it instead
-            var results = _database.SearchBy(TableType.USER, "user", from);
-            bool ok = false;
-            if (results != null)
-            {
-                // we expect there to be only 1 result since there shouldnt be more than 1 entry per user
-                ok = _database.Edit(TableType.USER, results[0].Data["userId"], "false", "true");
-                
-            }
-            else
-            {
-                ok = _database.Insert(TableType.USER, data);
-            }
-
-            if (ok) _chat.SendStatus(Main.chatMain, from + " successful.");
         }
 
         public void ExecuteOptinCommand(string from)
         {
-            // check if an entry already exists, if it does, just update it
-            var results = _database.SearchBy(TableType.USER, "user", from);
-            bool ok = false;
-            if (results != null)
-            {
-                // we expect there to be only 1 result since there shouldnt be more than 1 entry per user
-                ok = _database.Edit(TableType.USER, results[0].Data["userId"], "true", "false");
-                _chat.SendStatus(Main.chatMain, from + " successful.");
-            }
         }
 
     }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Tomestone.Commands;
@@ -11,44 +12,56 @@ using TomeLib.Db;
 using Meebey.SmartIrc4net;
 using TomeLib.Twitch;
 using System.Windows.Threading;
+using Tomestone.Databases;
 using Tomestone.Models;
 
 namespace Tomestone.Chatting
 {
     public partial class TomeChat : ChatBase
     {
-        private ParseCommands _parse;
+        private readonly ParseCommands _parse;
 
-        public History SentMessages { get; set; }
-        public History ReceivedMessages { get; set; }
+        public readonly History<UserMessage> ReceivedMessages = new History<UserMessage>();
 
         private TwitchConnection _twitch;
-        private Database _db { get { return Main.Db; } }
 
-        public ChatDatabase Chat;
+        private readonly string _mainChannel;
+        public Channel MainChannel { get { return Client.GetChannel(_mainChannel); } }
 
-        private DispatcherTimer _timer;
+        private readonly string _modChannel;
+        public Channel ModChannel { get { return Client.GetChannel(_modChannel); } }
 
-        public static IrcUser Self;
+        private readonly List<ICommand> Commands = new List<ICommand>();
 
         public TomeChat(string login, string pass, string main, string mods)
             : base(new Irc(login, pass, new[] { main, mods }))
         {
-            Self = Client.GetIrcUser(login);
-
-            SentMessages = new History();
-            ReceivedMessages = new History();
+            _mainChannel = main;
+            _modChannel = mods;
 
             _twitch = new TwitchConnection();
 
-            Chat = new ChatDatabase(_db);
+            var database = new ChatDatabase();
 
-            _parse = new ParseCommands(this, Chat);
+            _parse = new ParseCommands(this, database);
 
-            _timer = new DispatcherTimer();
-            _timer.Interval = TimeSpan.FromMinutes(1);
-            _timer.Tick += _timer_Tick;
-            _timer.Start();
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+            timer.Tick += _timer_Tick;
+            timer.Start();
+
+            Commands.Add(new AdminAddCommand(database, this));
+            Commands.Add(new AdminDeleteCommand(database, this));
+            Commands.Add(new AdminEditCommand(database, this));
+            Commands.Add(new AdminEntryCommand(database, this));
+            Commands.Add(new AdminInfoCommand(database, this));
+            Commands.Add(new AdminRepeatCommand(database, this));
+
+            Commands.Add(new SuperQuoteCommand(database, main.Substring(1)));
+
+            Commands.Add(new UserAddCommand(database));
+            Commands.Add(new UserHighlightCommand(this));
+            Commands.Add(new UserQuoteCommand(database, ReceivedMessages));
+            Commands.Add(new UserTeachCommand(database));
         }
 
         void _timer_Tick(object sender, EventArgs e)
@@ -59,30 +72,29 @@ namespace Tomestone.Chatting
 
         protected override void OnMessage(Channel channel, IrcUser from, string message)
         {
-            try
-            {
-                var obj = new ChatMessage(from, message);
+            //TODO: If user is either opted out or blacklisted, return void here.
 
-                //Check against first word how to handle the message
-                var command = message.TrimStart(' ').Split(' ')[0];
-                switch (command[0])
-                {
-                    case '@':
-                        _parse.ParseAdminCommands(channel, from, message, command);
-                        break;
-                    case '!':
-                        _parse.ParseUserCommands(channel, from, message, command);
-                        break;
-                    default:
-                        _parse.ParseDefaultCommands(channel, from, message, command);
-                        ReceivedMessages.Add(new ChatMessage(from, message));
-                        break;
-                }
-            }
-            catch (Exception e)
+            //TODO: Execute returns a result string. Print it.
+            foreach (var command in Commands)
+                if (command.Parse(message)) command.Execute(new UserMessage(channel, from, message));
+
+            //TODO:Below is depricated and should remove ASAP.
+            //TODO:Revamp 'defaultCommands'
+
+            //Check against first word how to handle the message
+            var commandString = message.TrimStart(' ').Split(' ')[0];
+            switch (commandString[0])
             {
-                var x = e;
-                { }
+                case '@':
+                    _parse.ParseAdminCommands(channel, from, message, commandString);
+                    break;
+                case '!':
+                    _parse.ParseUserCommands(channel, from, message, commandString);
+                    break;
+                default:
+                    _parse.ParseDefaultCommands(channel, from, message, commandString);
+                    ReceivedMessages.Add(new UserMessage(channel, from, message));
+                    break;
             }
         }
 
@@ -92,19 +104,13 @@ namespace Tomestone.Chatting
             OnMessage(channel, from, message);
         }
 
-        protected override void OnJoin(Channel channel, string from)
-        {
-        }
 
-        //Part and Quit don't work properly on Twitch
-        protected override void OnPart(Channel channel, string from)
-        {
-        }
 
-        protected override void OnQuit(Channel channel, string from)
-        {
-            //Treat the same as parts.
-            OnPart(channel, from);
-        }
+
+
+        //We're not using joins and parts
+        protected override void OnJoin(Channel channel, string from){}
+        protected override void OnPart(Channel channel, string from){}
+        protected override void OnQuit(Channel channel, string from){}
     }
 }
