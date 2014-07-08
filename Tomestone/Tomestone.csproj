@@ -97,6 +97,8 @@
     </ApplicationDefinition>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Chatting\IMessage.cs" />
+    <Compile Include="Commands\AdminCheckCommand.cs" />
+    <Compile Include="Commands\AdminTomeoutCommand.cs" />
     <Compile Include="Databases\ReplyTypes.cs" />
     <Compile Include="Commands\AdminAddCommand.cs" />
     <Compile Include="Commands\AdminDeleteCommand.cs" />

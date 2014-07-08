@@ -32,6 +32,9 @@ namespace Tomestone.Chatting
         public Channel ModChannel { get { return Client.GetChannel(_modChannel); } }
 
         private readonly List<ICommand> Commands = new List<ICommand>();
+        // tomeout is a little special because we need to directly check it
+        private AdminTomeoutCommand Tomeout = null;
+
 
         public TomeChat(string login, string pass, string main, string mods)
             : base(new Irc(login, pass, new[] { main, mods }))
@@ -55,6 +58,9 @@ namespace Tomestone.Chatting
             Commands.Add(new AdminEntryCommand(database, this));
             Commands.Add(new AdminInfoCommand(database, this));
             Commands.Add(new AdminRepeatCommand(database, this));
+            Commands.Add(new AdminCheckCommand(database, this));
+            Tomeout = new AdminTomeoutCommand(this);
+            Commands.Add(Tomeout);
 
             Commands.Add(new SuperQuoteCommand(database, main.Substring(1)));
 
@@ -73,6 +79,8 @@ namespace Tomestone.Chatting
         protected override void OnMessage(Channel channel, IrcUser from, string message)
         {
             //TODO: If user is either opted out or blacklisted, return void here.
+            if (Tomeout.CheckUserBlacklist(from.Nick)) return;
+
 
             //TODO: Execute returns a result string. Print it.
             foreach (var command in Commands)
