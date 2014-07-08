@@ -98,8 +98,6 @@
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Chatting\IMessage.cs" />
     <Compile Include="Chatting\TomeMessage.cs" />
-    <Compile Include="Commands\BaseAdminCommand.cs" />
-    <Compile Include="Commands\BaseUserCommand.cs" />
     <Compile Include="Commands\SuperTeachReply.cs" />
     <Compile Include="Commands\UserQuoteReply.cs" />
     <Compile Include="Commands\UserTeachReply.cs" />

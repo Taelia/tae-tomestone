@@ -10,12 +10,12 @@ using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
-    public class UserQuoteCommand : BaseUserCommand
+    public class UserQuoteCommand : ICommand
     {
         private readonly ChatDatabase _database;
         private readonly History<UserMessage> _history;
 
-        protected override string RegexString { get { return "!quote (.+?) (.+)"; } }
+        private const string RegexString = "!quote (.+?) (.+)";
 
         public UserQuoteCommand(ChatDatabase database, History<UserMessage> history)
         {
@@ -23,7 +23,13 @@ namespace Tomestone.Commands
             _history = history;
         }
 
-        public override TomeReply Execute(UserMessage userMessage)
+        public bool Parse(UserMessage userMessage)
+        {
+            Match match = Regex.Match(userMessage.Message, RegexString);
+            return match.Success;
+        }
+
+        public TomeReply Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 

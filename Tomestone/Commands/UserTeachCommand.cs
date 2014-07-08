@@ -6,18 +6,24 @@ using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
-    public class UserTeachCommand : BaseUserCommand
+    public class UserTeachCommand : ICommand
     {
         private readonly ChatDatabase _database;
 
-        protected override string RegexString { get { return "!teach (.+?) :: (.+)"; } }
+        private const string RegexString = "!teach (.+?) :: (.+)";
 
         public UserTeachCommand(ChatDatabase database)
         {
             _database = database;
         }
 
-        public override TomeReply Execute(UserMessage userMessage)
+        public bool Parse(UserMessage userMessage)
+        {
+            Match match = Regex.Match(userMessage.Message, RegexString);
+            return match.Success;
+        }
+
+        public TomeReply Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 

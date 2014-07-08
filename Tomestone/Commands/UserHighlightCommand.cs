@@ -9,18 +9,24 @@ using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
-    public class UserHighlightCommand : BaseUserCommand
+    public class UserHighlightCommand : ICommand
     {
         private readonly TomeChat _chat;
 
-        protected override string RegexString { get { return "!highlight (.+)"; } }
+        protected const string RegexString = "!highlight (.+)"; 
 
         public UserHighlightCommand(TomeChat chat)
         {
             _chat = chat;
         }
 
-        public override TomeReply Execute(UserMessage userMessage)
+        public bool Parse(UserMessage userMessage)
+        {
+            Match match = Regex.Match(userMessage.Message, RegexString);
+            return match.Success;
+        }
+
+        public TomeReply Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 

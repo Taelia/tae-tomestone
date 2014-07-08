@@ -9,7 +9,6 @@ namespace Tomestone.Commands
 {
     public class UserQuoteReply : ICommand
     {
-        private readonly Dictionary<string, DateTime> _replies = new Dictionary<string, DateTime>();
         private readonly ChatDatabase _database;
 
         Random r = new Random();

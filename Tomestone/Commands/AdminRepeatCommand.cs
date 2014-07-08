@@ -5,18 +5,27 @@ using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
-    public class AdminRepeatCommand : BaseAdminCommand
+    public class AdminRepeatCommand : ICommand
     {
         private readonly ChatDatabase _database;
+        private readonly string _adminChannel;
+        private const string RegexString =  "@repeat (([01][0-9]|2[0-3]):[0-5][0-9][ap]m) (.+)";
 
-        protected override string RegexString { get { return "@repeat (([01][0-9]|2[0-3]):[0-5][0-9][ap]m) (.+)"; } }
-
-        public AdminRepeatCommand(ChatDatabase database, string adminChannel) : base(adminChannel)
+        public AdminRepeatCommand(ChatDatabase database, string adminChannel)
         {
             _database = database;
+            _adminChannel = adminChannel;
         }
 
-        public override TomeReply Execute(UserMessage userMessage)
+        public bool Parse(UserMessage message)
+        {
+            Match match = Regex.Match(message.Message, RegexString);
+            var isAdminChannel = message.Channel.Name == _adminChannel;
+
+            return match.Success && isAdminChannel;
+        }
+
+        public TomeReply Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 

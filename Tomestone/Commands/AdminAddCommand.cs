@@ -10,18 +10,27 @@ using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
-    public class AdminAddCommand : BaseAdminCommand
+    public class AdminAddCommand : ICommand
     {
         private readonly ChatDatabase _database;
-        protected override string RegexString { get { return "@add ([a-zA-Z0-9_]+?) (.+)"; } }
+        private readonly string _adminChannel;
+        private const string RegexString = "@add ([a-zA-Z0-9_]+?) (.+)";
 
         public AdminAddCommand(ChatDatabase database, string adminChannel)
-            : base(adminChannel)
         {
             _database = database;
+            _adminChannel = adminChannel;
         }
 
-        public override TomeReply Execute(UserMessage userMessage)
+        public bool Parse(UserMessage message)
+        {
+            Match match = Regex.Match(message.Message, RegexString);
+            var isAdminChannel = message.Channel.Name == _adminChannel;
+
+            return match.Success && isAdminChannel;
+        }
+
+        public TomeReply Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 

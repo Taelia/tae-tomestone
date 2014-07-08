@@ -4,18 +4,27 @@ using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
-    public class AdminEditCommand : BaseAdminCommand
+    public class AdminEditCommand : ICommand
     {
         private readonly ChatDatabase _database;
+        private readonly string _adminChannel;
+        private const string RegexString = "@edit (.+?) (.+?) (.+?)=(.+)"; 
 
-        protected override string RegexString { get { return "@edit (.+?) (.+?) (.+?)=(.+)"; } }
-
-        public AdminEditCommand(ChatDatabase database, string adminChannel) : base(adminChannel)
+        public AdminEditCommand(ChatDatabase database, string adminChannel)
         {
             _database = database;
+            _adminChannel = adminChannel;
         }
 
-        public override TomeReply Execute(UserMessage userMessage)
+        public bool Parse(UserMessage message)
+        {
+            Match match = Regex.Match(message.Message, RegexString);
+            var isAdminChannel = message.Channel.Name == _adminChannel;
+
+            return match.Success && isAdminChannel;
+        }
+
+        public TomeReply Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 
