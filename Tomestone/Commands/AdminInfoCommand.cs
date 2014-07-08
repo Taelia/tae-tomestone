@@ -12,48 +12,41 @@ namespace Tomestone.Commands
     public class AdminInfoCommand : ICommand
     {
         private readonly ChatDatabase _database;
-        private readonly TomeChat _chat;
+        private readonly string _adminChannel;
+        private const string RegexString = "@info (.+)"; 
 
-        private const string RegexString = "@info (.+)";
-
-        public AdminInfoCommand(ChatDatabase database, TomeChat chat)
+        public AdminInfoCommand(ChatDatabase database, string adminChannel)
         {
             _database = database;
-            _chat = chat;
+            _adminChannel = adminChannel;
         }
 
-        public bool Parse(string message)
+        public bool Parse(UserMessage message)
         {
-            Match match = Regex.Match(message, RegexString);
-            return match.Success;
+            Match match = Regex.Match(message.Message, RegexString);
+            var isAdminChannel = message.Channel.Name == _adminChannel;
+
+            return match.Success && isAdminChannel;
         }
 
-        public string Execute(UserMessage userMessage)
+        public TomeReply Execute(UserMessage userMessage)
         {
-            if (userMessage.Channel != _chat.ModChannel)
-                return "";
-
             Match match = Regex.Match(userMessage.Message, RegexString);
 
-            if (match.Success)
-            {
-                string search = match.Groups[1].ToString();
+            string search = match.Groups[1].ToString();
 
-                FindAndPrintInfo(search);
-            }
-
-            return "";
+            var message = GetInfoFromDatabase(search);
+            return new TomeReply(userMessage.Channel, message);
         }
 
-        private void FindAndPrintInfo(string search)
+        private string GetInfoFromDatabase(string search)
         {
             var entry = _database.ReplyCache.Last(x => x.Message.Contains(search));
 
-            if (entry != null)
-            {
-                var info = entry.PrintInfo();
-                _chat.SendStatus(_chat.ModChannel.Name, info);
-            }
+            if (entry == null) 
+                return TomeReply.Error();
+
+            return entry.PrintInfo();
         }
     }
 }

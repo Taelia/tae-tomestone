@@ -17,28 +17,24 @@ namespace Tomestone.Commands
             _database = database;
         }
 
-        public bool Parse(string message)
+        public bool Parse(UserMessage userMessage)
         {
-            Match match = Regex.Match(message, RegexString);
+            Match match = Regex.Match(userMessage.Message, RegexString);
             return match.Success;
         }
 
-        public string Execute(UserMessage userMessage)
+        public TomeReply Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 
-            if (match.Success)
-            {
-                string trigger = match.Groups[1].Value.ToLower();
-                string reply = match.Groups[2].Value;
+            string trigger = match.Groups[1].Value.ToLower();
+            string reply = match.Groups[2].Value;
 
-                AddReplyToDatabase(userMessage.From.Nick, trigger, reply);
-            }
-
-            return "";
+            var message = AddReplyToDatabase(userMessage.From.Nick, trigger, reply);
+            return new TomeReply(userMessage.Channel, message);
         }
 
-        private void AddReplyToDatabase(string from, string trigger, string reply)
+        private string AddReplyToDatabase(string from, string trigger, string reply)
         {
             //Ignore all Twitch commands.
             if (reply.StartsWith("/timeout") || reply.StartsWith("/ban") ||
@@ -47,14 +43,18 @@ namespace Tomestone.Commands
                 reply.StartsWith("/subscribersoff") || reply.StartsWith("/clear") ||
                 reply.StartsWith("/mod") || reply.StartsWith("/unmod") ||
                 reply.StartsWith("/r9kbeta") || reply.StartsWith("/r9kbetaoff") ||
-                reply.StartsWith("/commercial") || reply.StartsWith("/mods")
-                ) return;
+                reply.StartsWith("/commercial") || reply.StartsWith("/mods")) 
+                return TomeReply.Angry();
 
 
-            _database.Tables["reply"].Insert(from, trigger.ToLower(), reply);
-            
+            var ok = _database.Tables["reply"].Insert(from, trigger.ToLower(), reply);
+            if (!ok)
+                return TomeReply.Error();
+
             var entry = _database.Tables["reply"].GetLatestEntry();
             _database.ReplyCache.Add(entry);
-        } 
+
+            return TomeReply.Confirmation();
+        }
     }
 }

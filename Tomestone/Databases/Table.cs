@@ -27,7 +27,7 @@ namespace Tomestone.Databases
             var data = new Dictionary<string, string>();
             data.Add("addedBy", addedBy);
             data.Add("trigger", trigger);
-            data.Add("command", reply);
+            data.Add("reply", reply);
 
             return _database.Insert(_tableName, data);
         }

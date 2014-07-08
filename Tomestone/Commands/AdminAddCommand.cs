@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Meebey.SmartIrc4net;
 using Tomestone.Chatting;
 using Tomestone.Databases;
 
@@ -12,46 +13,45 @@ namespace Tomestone.Commands
     public class AdminAddCommand : ICommand
     {
         private readonly ChatDatabase _database;
-        private readonly TomeChat _chat;
-
+        private readonly string _adminChannel;
         private const string RegexString = "@add ([a-zA-Z0-9_]+?) (.+)";
 
-        public AdminAddCommand(ChatDatabase database, TomeChat chat)
+        public AdminAddCommand(ChatDatabase database, string adminChannel)
         {
             _database = database;
-            _chat = chat;
+            _adminChannel = adminChannel;
         }
 
-        public bool Parse(string message)
+        public bool Parse(UserMessage message)
         {
-            Match match = Regex.Match(message, RegexString);
-            return match.Success;
+            Match match = Regex.Match(message.Message, RegexString);
+            var isAdminChannel = message.Channel.Name == _adminChannel;
+
+            return match.Success && isAdminChannel;
         }
 
-        public string Execute(UserMessage userMessage)
+        public TomeReply Execute(UserMessage userMessage)
         {
-            if (userMessage.Channel != _chat.ModChannel)
-                return "";
-
             Match match = Regex.Match(userMessage.Message, RegexString);
 
-            if (match.Success)
-            {
-                string trigger = match.Groups[1].ToString();
-                string reply = match.Groups[2].ToString();
+            string addedBy = userMessage.From.Nick;
+            string trigger = match.Groups[1].ToString();
+            string reply = match.Groups[2].ToString();
 
-                AddSpecialCommandToDatabase(userMessage.From.Nick, trigger, reply);
-            }
-
-            return "";
+            var message = AddSpecialCommandToDatabase(addedBy, trigger, reply);
+            return new TomeReply(userMessage.Channel, message);
         }
 
-        private void AddSpecialCommandToDatabase(string from, string trigger, string reply)
+        private string AddSpecialCommandToDatabase(string from, string trigger, string reply)
         {
-            _database.Tables["special"].Insert(from, trigger.ToLower(), reply);
+            var ok = _database.Tables["special"].Insert(from, trigger.ToLower(), reply);
+            if (!ok) 
+                return TomeReply.Error();
 
             var entry = _database.Tables["special"].GetLatestEntry();
             _database.ReplyCache.Add(entry);
+
+            return TomeReply.Confirmation();
         }
     }
 }

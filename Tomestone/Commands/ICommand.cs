@@ -1,11 +1,12 @@
-﻿using Meebey.SmartIrc4net;
+﻿using System.Security.Cryptography.X509Certificates;
+using Meebey.SmartIrc4net;
 using Tomestone.Chatting;
 
 namespace Tomestone.Commands
 {
     public interface ICommand
     {
-        bool Parse(string message);
-        string Execute(UserMessage message);
+        bool Parse(UserMessage message);
+        TomeReply Execute(UserMessage message);
     }
 }

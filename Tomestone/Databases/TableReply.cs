@@ -4,8 +4,9 @@ namespace Tomestone.Databases
 {
     public class TableReply
     {
-        private IReplyType Type { get; set; }
+        private IReplyType ReplyType { get; set; }
 
+        public string Type { get { return ReplyType.Type; }}
         public string Id { get; private set; }
         public string AddedBy { get; private set; }
         public string Trigger { get; private set; }
@@ -13,7 +14,7 @@ namespace Tomestone.Databases
 
         public TableReply(IReplyType type, TableEntry entry)
         {
-            Type = type;
+            ReplyType = type;
 
             Id = entry.Id;
             AddedBy = entry.AddedBy;
@@ -23,12 +24,12 @@ namespace Tomestone.Databases
 
         public string PrintMessage()
         {
-            return Type.PrintMessage(this);
+            return ReplyType.PrintMessage(this);
         }
 
         public string PrintInfo()
         {
-            return Type.PrintInfo(this);
+            return ReplyType.PrintInfo(this);
         }
     }
 }

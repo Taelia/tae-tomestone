@@ -7,69 +7,52 @@ namespace Tomestone.Commands
     public class AdminEditCommand : ICommand
     {
         private readonly ChatDatabase _database;
-        private readonly TomeChat _chat;
+        private readonly string _adminChannel;
+        private const string RegexString = "@edit (.+?) (.+?) (.+?)=(.+)"; 
 
-        private const string RegexString = "@edit (.+?) (.+?) (.+?)=(.+)";
-
-        public AdminEditCommand(ChatDatabase database, TomeChat chat)
+        public AdminEditCommand(ChatDatabase database, string adminChannel)
         {
             _database = database;
-            _chat = chat;
+            _adminChannel = adminChannel;
         }
 
-        public bool Parse(string message)
+        public bool Parse(UserMessage message)
         {
-            Match match = Regex.Match(message, RegexString);
-            return match.Success;
+            Match match = Regex.Match(message.Message, RegexString);
+            var isAdminChannel = message.Channel.Name == _adminChannel;
+
+            return match.Success && isAdminChannel;
         }
 
-        public string Execute(UserMessage userMessage)
+        public TomeReply Execute(UserMessage userMessage)
         {
-            if (userMessage.Channel != _chat.ModChannel)
-                return "";
-
             Match match = Regex.Match(userMessage.Message, RegexString);
 
-            if (match.Success)
-            {
-                string type = match.Groups[1].Value;
-                string id = match.Groups[2].Value;
-                string toReplace = match.Groups[3].Value;
-                string replaceWith = match.Groups[4].Value;
+            string type = match.Groups[1].Value;
+            string id = match.Groups[2].Value;
+            string toReplace = match.Groups[3].Value;
+            string replaceWith = match.Groups[4].Value;
 
-                EditEntryInDatabase(type, id, toReplace, replaceWith);
-            }
-
-            return "";
+            var message = EditEntry(type, id, toReplace, replaceWith);
+            return new TomeReply(userMessage.Channel, message);
         }
 
-        private void EditEntryInDatabase(string tableName, string id, string toReplace, string replaceWith)
+        private string EditEntry(string type, string id, string toReplace, string replaceWith)
         {
-            if (tableName == "quote") return;
+            if (type == "quote") 
+                return TomeReply.Error();
 
-            if (!_database.Tables.ContainsKey(tableName))
-            {
-                _chat.SendMessage(_chat.ModChannel.Name, TypeNotFoundError());
-                return;
-            }
+            if (!_database.Tables.ContainsKey(type)) 
+                return TomeReply.TypeNotFoundError(_database);
 
-            var table = _database.Tables[tableName];
-            
+            var table = _database.Tables[type];
+
             var ok = table.Edit(id, toReplace, replaceWith);
-            if (!ok) return;
+            if (!ok) 
+                return TomeReply.Error();
 
             var entry = table.GetById(id);
-            _chat.SendStatus(_chat.ModChannel.Name, "Edited: " + entry.PrintInfo());
-        } 
-
-        private string TypeNotFoundError()
-        {
-            string w = "Type not found. Available: ";
-            foreach (var tableName in _database.Tables.Keys)
-                w += tableName + ", ";
-
-            //Trim final ','
-            return w.Substring(0, w.Length - 1);
+            return "Edited: " + entry.PrintInfo();
         }
     }
 }

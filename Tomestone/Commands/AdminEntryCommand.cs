@@ -8,67 +8,46 @@ namespace Tomestone.Commands
     public class AdminEntryCommand : ICommand
     {
         private readonly ChatDatabase _database;
-        private readonly TomeChat _chat;
+        private readonly string _adminChannel;
+        private const string RegexString =  "@entry (.+?) (.+)"; 
 
-        private const string RegexString = "@entry (.+?) (.+)";
-
-        public AdminEntryCommand(ChatDatabase database, TomeChat chat)
+        public AdminEntryCommand(ChatDatabase database, string adminChannel)
         {
             _database = database;
-            _chat = chat;
+            _adminChannel = adminChannel;
         }
 
-        public bool Parse(string message)
+        public bool Parse(UserMessage message)
         {
-            Match match = Regex.Match(message, RegexString);
-            return match.Success;
+            Match match = Regex.Match(message.Message, RegexString);
+            var isAdminChannel = message.Channel.Name == _adminChannel;
+
+            return match.Success && isAdminChannel;
         }
 
-        public string Execute(UserMessage userMessage)
+        public TomeReply Execute(UserMessage userMessage)
         {
-            if (userMessage.Channel != _chat.ModChannel)
-                return "";
-
             Match match = Regex.Match(userMessage.Message, RegexString);
 
-            if (match.Success)
-            {
-                string table = match.Groups[1].ToString();
-                string id = match.Groups[2].ToString();
+            string table = match.Groups[1].ToString();
+            string id = match.Groups[2].ToString();
 
-                GetTableEntry(table, id);
-            }
-
-            return "";
+            var message = GetTableEntry(table, id);
+            return new TomeReply(userMessage.Channel, message);
         }
 
-        private void GetTableEntry(string tableName, string id)
+        private string GetTableEntry(string tableName, string id)
         {
             if (!_database.Tables.ContainsKey(tableName))
-            {
-                _chat.SendMessage(_chat.ModChannel.Name, TypeNotFoundError());
-                return;
-            }
+                return TomeReply.TypeNotFoundError(_database);
 
             var table = _database.Tables[tableName];
             var entry = table.GetById(id);
+
             if (entry == null)
-            {
-                _chat.SendMessage(_chat.ModChannel.Name, "Entry #" + id + " not found.");
-                return;
-            }
+                return TomeReply.Error();
 
-            _chat.SendMessage(_chat.ModChannel.Name, entry.PrintInfo());
-        }
-
-        private string TypeNotFoundError()
-        {
-            string w = "Type not found. Available: ";
-            foreach (var tableName in _database.Tables.Keys)
-                w += tableName + ", ";
-
-            //Trim final ','
-            return w.Substring(0, w.Length - 1);
+            return entry.PrintInfo();
         }
     }
 }

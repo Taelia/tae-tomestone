@@ -7,60 +7,47 @@ namespace Tomestone.Commands
     public class AdminDeleteCommand : ICommand
     {
         private readonly ChatDatabase _database;
-        private readonly TomeChat _chat;
-
+        private readonly string _adminChannel;
         private const string RegexString = "@delete (.+?) (.+)";
 
-        public AdminDeleteCommand(ChatDatabase database, TomeChat chat)
+        public AdminDeleteCommand(ChatDatabase database, string adminChannel)
         {
             _database = database;
-            _chat = chat;
+            _adminChannel = adminChannel;
         }
 
-        public bool Parse(string message)
+        public bool Parse(UserMessage message)
         {
-            Match match = Regex.Match(message, RegexString);
-            return match.Success;
+            Match match = Regex.Match(message.Message, RegexString);
+            var isAdminChannel = message.Channel.Name == _adminChannel;
+
+            return match.Success && isAdminChannel;
         }
 
-        public string Execute(UserMessage userMessage)
+        public TomeReply Execute(UserMessage userMessage)
         {
-            if (userMessage.Channel != _chat.ModChannel)
-                return "";
-
             Match match = Regex.Match(userMessage.Message, RegexString);
 
-            if (match.Success)
-            {
-                string type = match.Groups[1].Value;
-                string id = match.Groups[2].Value;
+            string tableName = match.Groups[1].Value;
+            string id = match.Groups[2].Value;
 
-                DeleteEntryFromDatabase(userMessage.From.Nick, type, id);
-            }
-
-            return "";
+            var ok = DeleteEntryFromDatabase(tableName, id);
+            return new TomeReply(userMessage.Channel, ok);
         }
 
-        private void DeleteEntryFromDatabase(string from, string tableName, string id)
+        private string DeleteEntryFromDatabase(string tableName, string id)
         {
             if (!_database.Tables.ContainsKey(tableName))
-            {
-                _chat.SendMessage(_chat.ModChannel.Name, TypeNotFoundError());
-                return;
-            }
+                return TomeReply.TypeNotFoundError(_database);
 
             var table = _database.Tables[tableName];
+            var entry = table.GetById(id);
+
             var ok = table.Delete(id);
-        }
+            if (!ok) 
+                return TomeReply.Error();
 
-        private string TypeNotFoundError()
-        {
-            string w = "Type not found. Available: ";
-            foreach (var tableName in _database.Tables.Keys)
-                w += tableName + ", ";
-
-            //Trim final ','
-            return w.Substring(0, w.Length - 1);
+            return entry.Type + " #" + id + " has been deleted.";
         }
     }
 }

@@ -66,42 +66,5 @@ namespace Tomestone.Commands
             //Finally, send the message.
             _chat.SendMessage(channel.Name, reply);
         }
-
-        public void Quote(string from = null)
-        {
-            /*
-            var table = _database.Tables["user"];
-
-            // first check if the user has opted out
-            var dataRows = table.SearchBy("trigger", from);
-
-            var results = new List<TomeMessage>();
-            foreach (var dR in dataRows)
-                results.Add(new TomeMessage(new DefaultEntry(dR["id"].ToString(), dR["addedBy"].ToString(), dR["trigger"].ToString(), dR["reply"].ToString())));
-
-            if (results != null)
-            {
-                // we expect there to be only 1 result since there shouldnt be more than 1 entry per user
-                if (results[0].Message.CompareTo("true") == 0) return;
-            }
-            */
-            var table = _database.Tables["quote"];
-
-            var entry = table.GetRandomBy("trigger", from);
-            
-            _database.ReplyCache.Add(entry);
-            _chat.SendStatus(Main.chatMain, entry.Message + " -" + from);
-        }
-
-        public void ExecuteRepeatCommand(string time)
-        {
-            var table = _database.Tables["repeat"];
-
-            var entry = table.GetRandomBy("trigger", time);
-            if (entry == null) return;
-
-            _database.ReplyCache.Add(entry);
-            _chat.SendStatus(Main.chatMain, entry.Message);
-        }
     }
 }
