@@ -5,49 +5,37 @@ using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
-    public class AdminRepeatCommand : ICommand
+    public class AdminRepeatCommand : BaseAdminCommand
     {
         private readonly ChatDatabase _database;
-        private readonly TomeChat _chat;
 
-        private const string RegexString = "@repeat (([01][0-9]|2[0-3]):[0-5][0-9][ap]m) (.+)";
+        protected override string RegexString { get { return "@repeat (([01][0-9]|2[0-3]):[0-5][0-9][ap]m) (.+)"; } }
 
-        public AdminRepeatCommand(ChatDatabase database, TomeChat chat)
+        public AdminRepeatCommand(ChatDatabase database, string adminChannel) : base(adminChannel)
         {
             _database = database;
-            _chat = chat;
         }
 
-        public bool Parse(string message)
+        public override TomeReply Execute(UserMessage userMessage)
         {
-            Match match = Regex.Match(message, RegexString);
-            return match.Success;
-        }
-
-        public string Execute(UserMessage userMessage)
-        {
-            if (userMessage.Channel != _chat.ModChannel) 
-                return "";
-
             Match match = Regex.Match(userMessage.Message, RegexString);
 
-            if (match.Success)
-            {
-                string trigger = match.Groups[1].ToString();
-                string reply = match.Groups[2].ToString();
+            string trigger = match.Groups[1].ToString();
+            string reply = match.Groups[2].ToString();
 
-                AddRepeatToDatabase(userMessage.From.Nick, trigger, reply);
-            }
-
-            return "";
+            var message = AddRepeatToDatabase(userMessage.From.Nick, trigger, reply);
+            return new TomeReply(userMessage.Channel, message);
         }
 
-        private void AddRepeatToDatabase(string from, string trigger, string reply)
+        private string AddRepeatToDatabase(string from, string trigger, string reply)
         {
-            _database.Tables["repeat"].Insert(from, trigger.ToLower(), reply);
+            var ok = _database.Tables["repeat"].Insert(from, trigger.ToLower(), reply);
+            if (!ok) return TomeReply.Error();
 
             var entry = _database.Tables["repeat"].GetLatestEntry();
             _database.ReplyCache.Add(entry);
+
+            return TomeReply.Confirmation();
         }
     }
 }

@@ -9,42 +9,32 @@ using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
-    public class UserHighlightCommand : ICommand
+    public class UserHighlightCommand : BaseUserCommand
     {
         private readonly TomeChat _chat;
 
-        private const string RegexString = "!highlight (.+)";
+        protected override string RegexString { get { return "!highlight (.+)"; } }
 
         public UserHighlightCommand(TomeChat chat)
         {
             _chat = chat;
         }
 
-        public bool Parse(string message)
-        {
-            Match match = Regex.Match(message, RegexString);
-            return match.Success;
-        }
-
-        public string Execute(UserMessage userMessage)
+        public override TomeReply Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 
-            if (match.Success)
-            {
-                string message = match.Groups[1].ToString();
+            string description = match.Groups[1].ToString();
 
-                HighlightIn30Minutes(userMessage.From.Nick, DateTime.Now.ToString("t"), message);
-            }
-
-            return "";
+            HighlightIn30Minutes(userMessage.From.Nick, DateTime.Now.ToString("t"), description);
+            return new TomeReply(userMessage.Channel, TomeReply.Confirmation());
         }
 
         private async void HighlightIn30Minutes(string nick, string time, string message)
         {
             await Task.Delay(TimeSpan.FromMinutes(30));
 
-            _chat.SendMessage(_chat.ModChannel.Name, nick + "suggested a highlight at " + time + ": " + message );
+            _chat.SendMessage(_chat.Channels["mods"], nick + "suggested a highlight at " + time + ": " + message);
         }
     }
 }

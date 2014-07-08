@@ -1,17 +1,20 @@
-﻿using System.Windows.Input;
+﻿using System.Security.Cryptography.X509Certificates;
+using System.Windows.Input;
 using Tomestone.Databases;
 
 namespace Tomestone.Chatting
 {
     public interface IReplyType
     {
+        string Type { get; }
+
         string PrintMessage(TableReply message);
         string PrintInfo(TableReply message);
     }
 
     public class DefaultReply : IReplyType
     {
-        private string Type { get; set; }
+        public string Type { get; private set; }
 
         public DefaultReply(string type)
         {
@@ -31,7 +34,7 @@ namespace Tomestone.Chatting
 
     public class QuoteReply : IReplyType
     {
-        private string Type { get; set; }
+        public string Type { get; private set; }
 
         public QuoteReply()
         {

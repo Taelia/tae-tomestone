@@ -97,6 +97,13 @@
     </ApplicationDefinition>
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Chatting\IMessage.cs" />
+    <Compile Include="Chatting\TomeMessage.cs" />
+    <Compile Include="Commands\BaseAdminCommand.cs" />
+    <Compile Include="Commands\BaseUserCommand.cs" />
+    <Compile Include="Commands\SuperTeachReply.cs" />
+    <Compile Include="Commands\UserQuoteReply.cs" />
+    <Compile Include="Commands\UserTeachReply.cs" />
+    <Compile Include="Commands\UserAddReply.cs" />
     <Compile Include="Databases\ReplyTypes.cs" />
     <Compile Include="Commands\AdminAddCommand.cs" />
     <Compile Include="Commands\AdminDeleteCommand.cs" />
@@ -116,7 +123,6 @@
     <Compile Include="Chatting\History.cs" />
     <Compile Include="Databases\TableReply.cs" />
     <Compile Include="Commands\ICommand.cs" />
-    <Compile Include="Commands\UserAddCommand.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="Views\MainView.xaml.cs">
       <DependentUpon>MainView.xaml</DependentUpon>
@@ -132,10 +138,10 @@
     <Compile Include="Chatting\Chat-Commands.cs" />
     <Compile Include="Chatting\Chat-Functions.cs" />
     <Compile Include="Chatting\Chat.cs" />
-    <Compile Include="Commands\ParseCommands.cs" />
-    <Compile Include="Commands\AdminCommands.cs" />
-    <Compile Include="Commands\DefaultCommands.cs" />
-    <Compile Include="Commands\UserCommands.cs" />
+    <Compile Include="OldFiles\ParseCommands.cs" />
+    <Compile Include="OldFiles\AdminCommands.cs" />
+    <Compile Include="OldFiles\DefaultCommands.cs" />
+    <Compile Include="OldFiles\UserCommands.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -191,6 +197,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

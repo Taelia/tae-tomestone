@@ -25,19 +25,15 @@ namespace Tomestone.Chatting
 
         private TwitchConnection _twitch;
 
-        private readonly string _mainChannel;
-        public Channel MainChannel { get { return Client.GetChannel(_mainChannel); } }
+        public readonly Dictionary<string, string> Channels = new Dictionary<string, string>();
 
-        private readonly string _modChannel;
-        public Channel ModChannel { get { return Client.GetChannel(_modChannel); } }
-
-        private readonly List<ICommand> Commands = new List<ICommand>();
+        private readonly List<ICommand> _commands = new List<ICommand>();
 
         public TomeChat(string login, string pass, string main, string mods)
             : base(new Irc(login, pass, new[] { main, mods }))
         {
-            _mainChannel = main;
-            _modChannel = mods;
+            Channels.Add("main", main);
+            Channels.Add("mods", mods);
 
             _twitch = new TwitchConnection();
 
@@ -49,53 +45,58 @@ namespace Tomestone.Chatting
             timer.Tick += _timer_Tick;
             timer.Start();
 
-            Commands.Add(new AdminAddCommand(database, this));
-            Commands.Add(new AdminDeleteCommand(database, this));
-            Commands.Add(new AdminEditCommand(database, this));
-            Commands.Add(new AdminEntryCommand(database, this));
-            Commands.Add(new AdminInfoCommand(database, this));
-            Commands.Add(new AdminRepeatCommand(database, this));
+            _commands.Add(new AdminAddCommand(database, Channels["mods"]));
+            _commands.Add(new AdminDeleteCommand(database, Channels["mods"]));
+            _commands.Add(new AdminEditCommand(database, Channels["mods"]));
+            _commands.Add(new AdminEntryCommand(database, Channels["mods"]));
+            _commands.Add(new AdminInfoCommand(database, Channels["mods"]));
+            _commands.Add(new AdminRepeatCommand(database, Channels["mods"]));
 
-            Commands.Add(new SuperQuoteCommand(database, main.Substring(1)));
+            _commands.Add(new SuperQuoteCommand(database, Channels["main"].Substring(1)));
 
-            Commands.Add(new UserAddCommand(database));
-            Commands.Add(new UserHighlightCommand(this));
-            Commands.Add(new UserQuoteCommand(database, ReceivedMessages));
-            Commands.Add(new UserTeachCommand(database));
+            _commands.Add(new UserHighlightCommand(this));
+            _commands.Add(new UserQuoteCommand(database, ReceivedMessages));
+            _commands.Add(new UserTeachCommand(database));
+
+            _commands.Add(new SuperTeachReply(database));
+            _commands.Add(new UserAddReply(database));
+            _commands.Add(new UserTeachReply(database));
+            _commands.Add(new UserQuoteReply(database));
         }
 
         void _timer_Tick(object sender, EventArgs e)
         {
-            _parse.ParseRepeat();
         }
 
 
         protected override void OnMessage(Channel channel, IrcUser from, string message)
         {
+            var userMessage = new UserMessage(channel, from, message);
+
             //TODO: If user is either opted out or blacklisted, return void here.
 
-            //TODO: Execute returns a result string. Print it.
-            foreach (var command in Commands)
-                if (command.Parse(message)) command.Execute(new UserMessage(channel, from, message));
-
-            //TODO:Below is depricated and should remove ASAP.
-            //TODO:Revamp 'defaultCommands'
-
-            //Check against first word how to handle the message
-            var commandString = message.TrimStart(' ').Split(' ')[0];
-            switch (commandString[0])
+            //If a user message can be parsed into a command, print a reply message and ignore everything else.
+            foreach (var command in _commands)
             {
-                case '@':
-                    _parse.ParseAdminCommands(channel, from, message, commandString);
-                    break;
-                case '!':
-                    _parse.ParseUserCommands(channel, from, message, commandString);
-                    break;
-                default:
-                    _parse.ParseDefaultCommands(channel, from, message, commandString);
-                    ReceivedMessages.Add(new UserMessage(channel, from, message));
-                    break;
+                if (command.Parse(userMessage))
+                {
+                    try
+                    {
+                        ExecuteCommand(command, userMessage);
+                    }
+                    catch (Exception ex)
+                    {
+                        var x = ex;
+                    }
+                    return;
+                }
             }
+        }
+
+        private void ExecuteCommand(ICommand command, UserMessage userMessage)
+        {
+            TomeReply reply = command.Execute(userMessage);
+            SendMessage(reply.Channel.Name, reply.Message);
         }
 
         protected override void OnAction(Channel channel, IrcUser from, string message)
@@ -109,8 +110,8 @@ namespace Tomestone.Chatting
 
 
         //We're not using joins and parts
-        protected override void OnJoin(Channel channel, string from){}
-        protected override void OnPart(Channel channel, string from){}
-        protected override void OnQuit(Channel channel, string from){}
+        protected override void OnJoin(Channel channel, string from) { }
+        protected override void OnPart(Channel channel, string from) { }
+        protected override void OnQuit(Channel channel, string from) { }
     }
 }

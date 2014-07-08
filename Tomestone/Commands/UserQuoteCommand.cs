@@ -10,49 +10,43 @@ using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
-    public class UserQuoteCommand : ICommand
+    public class UserQuoteCommand : BaseUserCommand
     {
         private readonly ChatDatabase _database;
-        private readonly History<UserMessage> _history; 
+        private readonly History<UserMessage> _history;
 
-        private const string RegexString = "!quote (.+?) (.+)";
+        protected override string RegexString { get { return "!quote (.+?) (.+)"; } }
 
-        public UserQuoteCommand(ChatDatabase database, History<UserMessage> history )
+        public UserQuoteCommand(ChatDatabase database, History<UserMessage> history)
         {
             _database = database;
             _history = history;
         }
 
-        public bool Parse(string message)
-        {
-            Match match = Regex.Match(message, RegexString);
-            return match.Success;
-        }
-
-        public string Execute(UserMessage userMessage)
+        public override TomeReply Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 
-            if (match.Success)
-            {
-                string user = match.Groups[1].ToString();
-                string search = match.Groups[2].ToString();
+            string user = match.Groups[1].ToString();
+            string search = match.Groups[2].ToString();
 
-                AddQuoteToDatabase(userMessage.From.Nick, user, search);
-            }
-
-            return "";
+            var reply = AddQuoteToDatabase(userMessage.From.Nick, user, search);
+            return new TomeReply(userMessage.Channel, reply);
         }
 
-        private void AddQuoteToDatabase(string from, string user, string search)
+        private string AddQuoteToDatabase(string from, string user, string search)
         {
             //Get the latest message from user containing the search string.
             var userMessage = _history.Search(user, search);
 
-            _database.Tables["quote"].Insert(from, userMessage.From.Nick, userMessage.Message);
-            
+            var ok = _database.Tables["quote"].Insert(from, userMessage.From.Nick, userMessage.Message);
+            if (!ok) 
+                return TomeReply.Error();
+
             var entry = _database.Tables["quote"].GetLatestEntry();
             _database.ReplyCache.Add(entry);
+
+            return TomeReply.Confirmation();
         }
     }
 }

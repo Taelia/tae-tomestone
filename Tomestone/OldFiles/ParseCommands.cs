@@ -68,17 +68,6 @@ namespace Tomestone.Commands
 
         public void ParseDefaultCommands(Channel channel, IrcUser from, string message, string command)
         {
-            Quote(channel, from, message);
-            Reply(channel, from, message);
-        }
-
-        //**** ADMIN COMMANDS ****
-
-        public void ParseRepeat()
-        {
-            var time = DateTime.Now.ToString("hh:mmtt");
-
-            defaultCommands.ExecuteRepeatCommand(time);
         }
 
 
@@ -160,27 +149,6 @@ namespace Tomestone.Commands
 
                 userCommands.ExecuteSpecialCommand(command);
                 return;
-            }
-        }
-
-        public void Reply(Channel channel, IrcUser from, string message)
-        {
-            //Only check if a reply is required 25% of the time.
-            Random r = new Random();
-            if (r.Next(0, 100) < 25)
-                defaultCommands.Reply(channel, from, message);
-        }
-
-        public void Quote(Channel channel, IrcUser from, string message)
-        {
-            //chance to quote is 2%
-            Random r = new Random();
-            if (r.Next(0, 100) < 1) 
-            {
-
-                string user = from.Nick.ToLower();
-
-                defaultCommands.Quote(user);
             }
         }
 
