@@ -1,20 +1,22 @@
 ﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using Meebey.SmartIrc4net;
+using TomeLib.Db;
 using Tomestone.Chatting;
-using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
     public class UserTeachCommand : ICommand
     {
-        private readonly ChatDatabase _database;
+        private TomeChat _chat;
+        private const string RegexString = "^!teach (.+?) :: (.+)";
 
-        private const string RegexString = "!teach (.+?) :: (.+)";
+        Dictionary<string, Table> Tables = new Dictionary<string, Table>();
 
-        public UserTeachCommand(ChatDatabase database)
+        public UserTeachCommand(TomeChat chat)
         {
-            _database = database;
+            _chat = chat;
+
+            Tables.Add("reply", new Table(Database.GetDatabase("tomestone.db"), "replies", "id", "addedBy", "trigger", "reply"));
         }
 
         public bool Parse(UserMessage userMessage)
@@ -23,15 +25,15 @@ namespace Tomestone.Commands
             return match.Success;
         }
 
-        public TomeReply Execute(UserMessage userMessage)
+        public void Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 
             string trigger = match.Groups[1].Value.ToLower();
-            string reply = match.Groups[2].Value;
+            string message = match.Groups[2].Value;
 
-            var message = AddReplyToDatabase(userMessage.From.Nick, trigger, reply);
-            return new TomeReply(userMessage.Channel, message);
+            var reply = AddReplyToDatabase(userMessage.From.Nick, trigger, message);
+            _chat.SendMessage(userMessage.Channel.Name, reply);
         }
 
         private string AddReplyToDatabase(string from, string trigger, string reply)
@@ -43,18 +45,33 @@ namespace Tomestone.Commands
                 reply.StartsWith("/subscribersoff") || reply.StartsWith("/clear") ||
                 reply.StartsWith("/mod") || reply.StartsWith("/unmod") ||
                 reply.StartsWith("/r9kbeta") || reply.StartsWith("/r9kbetaoff") ||
-                reply.StartsWith("/commercial") || reply.StartsWith("/mods")) 
-                return TomeReply.Angry();
+                reply.StartsWith("/commercial") || reply.StartsWith("/mods"))
+                return DefaultReplies.Angry();
 
 
-            var ok = _database.Tables["reply"].Insert(from, trigger.ToLower(), reply);
-            if (!ok)
-                return TomeReply.Error();
+            var data = new Dictionary<string, string>();
+            data["addedBy"] = from;
+            data["trigger"] = trigger;
+            data["reply"] = reply;
 
-            var entry = _database.Tables["reply"].GetLatestEntry();
-            _database.ReplyCache.Add(entry);
+            var ok = Tables["reply"].Insert(data);
+            if (!ok) return DefaultReplies.Error();
 
-            return TomeReply.Confirmation();
+            var entry = Tables["reply"].GetLatestEntry();
+            var tomeReply = CreateReply(entry);
+            _chat.ReplyCache.Add(tomeReply);
+
+            return DefaultReplies.Confirmation();
+        }
+
+        private static TomeReply CreateReply(TableEntry entry)
+        {
+            var message = entry.Columns["reply"];
+
+            var info = "Reply #" + entry.Columns["id"] + " ( " + entry.Columns["trigger"] + " -> " + entry.Columns["reply"] + " )";
+
+            var tomeReply = new TomeReply(message, info);
+            return tomeReply;
         }
     }
 }

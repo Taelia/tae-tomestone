@@ -7,6 +7,6 @@ namespace Tomestone.Commands
     public interface ICommand
     {
         bool Parse(UserMessage message);
-        TomeReply Execute(UserMessage message);
+        void Execute(UserMessage message);
     }
 }

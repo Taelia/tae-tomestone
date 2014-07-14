@@ -1,27 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+using System.Security.AccessControl;
 using Tomestone.Commands;
-using Tomestone.Chatting;
-using System.Windows;
 using TomeLib.Irc;
-using TomeLib.Db;
 using Meebey.SmartIrc4net;
 using TomeLib.Twitch;
 using System.Windows.Threading;
-using Tomestone.Databases;
-using Tomestone.Models;
 
 namespace Tomestone.Chatting
 {
     public partial class TomeChat : ChatBase
     {
-        private readonly ParseCommands _parse;
-
         public readonly History<UserMessage> ReceivedMessages = new History<UserMessage>();
+        public readonly List<TomeReply> ReplyCache = new List<TomeReply>(); 
 
         private TwitchConnection _twitch;
 
@@ -29,50 +20,53 @@ namespace Tomestone.Chatting
 
         private readonly List<ICommand> _commands = new List<ICommand>();
 
-        public TomeChat(string login, string pass, string main, string mods)
-            : base(new Irc(login, pass, new[] { main, mods }))
+        public TomeChat(string login, string pass, string main, string mods )
+            : base(new Irc(login, pass, new[] { main, mods, "#tomestone"}))
         {
+            Client.WriteLine("TWITCHCLIENT 3");
+
             Channels.Add("main", main);
             Channels.Add("mods", mods);
+            Channels.Add("tome", "#tomestone");
 
             _twitch = new TwitchConnection();
-
-            var database = new ChatDatabase();
-
-            _parse = new ParseCommands(this, database);
 
             var timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
             timer.Tick += _timer_Tick;
             timer.Start();
 
-            _commands.Add(new AdminAddCommand(database, Channels["mods"]));
-            _commands.Add(new AdminDeleteCommand(database, Channels["mods"]));
-            _commands.Add(new AdminEditCommand(database, Channels["mods"]));
-            _commands.Add(new AdminEntryCommand(database, Channels["mods"]));
-            _commands.Add(new AdminInfoCommand(database, Channels["mods"]));
-            _commands.Add(new AdminRepeatCommand(database, Channels["mods"]));
+            _commands.Add(new AdminAddCommand(this));
+            _commands.Add(new AdminDeleteCommand(this));
+            _commands.Add(new AdminEditCommand(this));
+            _commands.Add(new AdminEntryCommand(this));
+            _commands.Add(new AdminInfoCommand(this));
 
-            _commands.Add(new SuperQuoteCommand(database, Channels["main"].Substring(1)));
+            _commands.Add(new SuperQuoteCommand(this));
 
             _commands.Add(new UserHighlightCommand(this));
-            _commands.Add(new UserQuoteCommand(database, ReceivedMessages));
-            _commands.Add(new UserTeachCommand(database));
+            _commands.Add(new UserBribeCommand(this));
+            _commands.Add(new UserTeachCommand(this));
+            _commands.Add(new UserQuoteCommand(this));
+            _commands.Add(new UserVoteCommand(this));
 
-            _commands.Add(new SuperTeachReply(database));
-            _commands.Add(new UserAddReply(database));
-            _commands.Add(new UserTeachReply(database));
-            _commands.Add(new UserQuoteReply(database));
+            _commands.Add(new SuperTeachReply(this));
+
+            _commands.Add(new UserTeachReply(this));
+            _commands.Add(new UserQuoteReply(this));
         }
+
+        
 
         void _timer_Tick(object sender, EventArgs e)
         {
         }
 
 
-        protected override void OnMessage(Channel channel, IrcUser from, string message)
+        protected override void OnMessage(TwitchIrcChannel channel, TwitchChannelUser from, string message)
         {
-            var userMessage = new UserMessage(channel, from, message);
 
+            var userMessage = new UserMessage(channel, from, message);
+            ReceivedMessages.Add(userMessage);
             //TODO: If user is either opted out or blacklisted, return void here.
 
             //If a user message can be parsed into a command, print a reply message and ignore everything else.
@@ -95,23 +89,23 @@ namespace Tomestone.Chatting
 
         private void ExecuteCommand(ICommand command, UserMessage userMessage)
         {
-            TomeReply reply = command.Execute(userMessage);
-            SendMessage(reply.Channel.Name, reply.Message);
+            command.Execute(userMessage);
         }
 
-        protected override void OnAction(Channel channel, IrcUser from, string message)
+        protected override void OnAction(TwitchIrcChannel channel, TwitchChannelUser from, string message)
         {
             //Treat the same as messages.
             OnMessage(channel, from, message);
         }
 
+        protected override void OnClear(TwitchIrcChannel channel, TwitchChannelUser from = null)
+        {
+            //
+        }
 
-
-
-
-        //We're not using joins and parts
-        protected override void OnJoin(Channel channel, string from) { }
-        protected override void OnPart(Channel channel, string from) { }
-        protected override void OnQuit(Channel channel, string from) { }
+        protected override void OnModeChange(TwitchIrcChannel channel, ChannelModes mode)
+        {
+            //
+        }
     }
 }

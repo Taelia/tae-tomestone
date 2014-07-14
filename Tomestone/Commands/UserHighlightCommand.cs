@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Tomestone.Chatting;
-using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
@@ -13,7 +9,7 @@ namespace Tomestone.Commands
     {
         private readonly TomeChat _chat;
 
-        protected const string RegexString = "!highlight (.+)"; 
+        protected const string RegexString = "^!highlight (.+)";
 
         public UserHighlightCommand(TomeChat chat)
         {
@@ -26,21 +22,22 @@ namespace Tomestone.Commands
             return match.Success;
         }
 
-        public TomeReply Execute(UserMessage userMessage)
+        public void Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 
             string description = match.Groups[1].ToString();
 
             HighlightIn30Minutes(userMessage.From.Nick, DateTime.Now.ToString("t"), description);
-            return new TomeReply(userMessage.Channel, TomeReply.Confirmation());
+            _chat.SendMessage(userMessage.Channel.Name, DefaultReplies.Confirmation());
         }
 
-        private async void HighlightIn30Minutes(string nick, string time, string message)
+        private async void HighlightIn30Minutes(string nick, string time, string description)
         {
             await Task.Delay(TimeSpan.FromMinutes(30));
 
-            _chat.SendMessage(_chat.Channels["mods"], nick + "suggested a highlight at " + time + ": " + message);
+            var message = nick + " suggested a highlight at " + time + ": " + description;
+            _chat.SendMessage(_chat.Channels["mods"], "/me :: " + message);
         }
     }
 }

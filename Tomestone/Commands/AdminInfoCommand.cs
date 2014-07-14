@@ -1,52 +1,48 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Tomestone.Chatting;
-using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
     public class AdminInfoCommand : ICommand
     {
-        private readonly ChatDatabase _database;
-        private readonly string _adminChannel;
-        private const string RegexString = "@info (.+)"; 
+        private readonly TomeChat _chat;
 
-        public AdminInfoCommand(ChatDatabase database, string adminChannel)
+        private const string RegexString = "^@info (.+)"; 
+
+        public AdminInfoCommand(TomeChat chat)
         {
-            _database = database;
-            _adminChannel = adminChannel;
+            _chat = chat;
         }
 
         public bool Parse(UserMessage message)
         {
             Match match = Regex.Match(message.Message, RegexString);
-            var isAdminChannel = message.Channel.Name == _adminChannel;
+            var isAdminChannel = message.Channel.Name == _chat.Channels["mods"];
 
             return match.Success && isAdminChannel;
         }
 
-        public TomeReply Execute(UserMessage userMessage)
+        public void Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 
             string search = match.Groups[1].ToString();
 
             var message = GetInfoFromDatabase(search);
-            return new TomeReply(userMessage.Channel, message);
+
+            _chat.SendMessage(userMessage.Channel.Name, "/me :: " + message);
         }
 
         private string GetInfoFromDatabase(string search)
         {
-            var entry = _database.ReplyCache.Last(x => x.Message.Contains(search));
+            //Find the latest message sent that contains 'search' within the message.
+            var entry = _chat.ReplyCache.LastOrDefault(x => x.Message.Contains(search));
 
-            if (entry == null) 
-                return TomeReply.Error();
+            if (entry == null)
+                return "I did not send any messages containing '" + search + "'.";
 
-            return entry.PrintInfo();
+            return entry.InfoMessage;
         }
     }
 }

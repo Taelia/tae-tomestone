@@ -58,6 +58,9 @@
     <Reference Include="Caliburn.Micro">
       <HintPath>..\packages\Caliburn.Micro.1.5.2\lib\net45\Caliburn.Micro.dll</HintPath>
     </Reference>
+    <Reference Include="DragonGame">
+      <HintPath>..\..\DragonGame\DragonGame\DragonGame\bin\x86\Release\DragonGame.exe</HintPath>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\Mimicka\Mimicka\Libs\Newtonsoft.Json.dll</HintPath>
@@ -96,30 +99,25 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="AppBootstrapper.cs" />
+    <Compile Include="Chatting\DefaultReplies.cs" />
     <Compile Include="Chatting\IMessage.cs" />
     <Compile Include="Chatting\TomeMessage.cs" />
+    <Compile Include="Commands\UserBribeCommand.cs" />
+    <Compile Include="Commands\UserQuoteCommand.cs" />
     <Compile Include="Commands\SuperTeachReply.cs" />
     <Compile Include="Commands\UserQuoteReply.cs" />
     <Compile Include="Commands\UserTeachReply.cs" />
-    <Compile Include="Commands\UserAddReply.cs" />
-    <Compile Include="Databases\ReplyTypes.cs" />
     <Compile Include="Commands\AdminAddCommand.cs" />
     <Compile Include="Commands\AdminDeleteCommand.cs" />
     <Compile Include="Commands\AdminEditCommand.cs" />
     <Compile Include="Commands\AdminEntryCommand.cs" />
     <Compile Include="Commands\AdminInfoCommand.cs" />
-    <Compile Include="Commands\AdminRepeatCommand.cs" />
     <Compile Include="Commands\SuperQuoteCommand.cs" />
     <Compile Include="Commands\UserHighlightCommand.cs" />
-    <Compile Include="Commands\UserQuoteCommand.cs" />
+    <Compile Include="Commands\UserVoteCommand.cs" />
     <Compile Include="Commands\UserTeachCommand.cs" />
-    <Compile Include="Databases\TableEntry.cs" />
-    <Compile Include="Databases\Table.cs" />
-    <Compile Include="Databases\UserTable.cs" />
-    <Compile Include="Databases\TomeDatabase.cs" />
     <Compile Include="Chatting\UserMessage.cs" />
     <Compile Include="Chatting\History.cs" />
-    <Compile Include="Databases\TableReply.cs" />
     <Compile Include="Commands\ICommand.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="Views\MainView.xaml.cs">
@@ -133,13 +131,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Chatting\Chat-Commands.cs" />
-    <Compile Include="Chatting\Chat-Functions.cs" />
     <Compile Include="Chatting\Chat.cs" />
-    <Compile Include="OldFiles\ParseCommands.cs" />
-    <Compile Include="OldFiles\AdminCommands.cs" />
-    <Compile Include="OldFiles\DefaultCommands.cs" />
-    <Compile Include="OldFiles\UserCommands.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>

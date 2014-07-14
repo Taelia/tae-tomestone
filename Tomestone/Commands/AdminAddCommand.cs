@@ -1,36 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Meebey.SmartIrc4net;
+using TomeLib.Db;
 using Tomestone.Chatting;
-using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
     public class AdminAddCommand : ICommand
     {
-        private readonly ChatDatabase _database;
-        private readonly string _adminChannel;
-        private const string RegexString = "@add ([a-zA-Z0-9_]+?) (.+)";
+        private readonly TomeChat _chat;
 
-        public AdminAddCommand(ChatDatabase database, string adminChannel)
+        private const string RegexString = "^@add ([a-zA-Z0-9_]+?) (.+)";
+
+        private readonly Table _commandTable = new Table(Database.GetDatabase("tomestone.db"), "commands", "id", "addedBy", "trigger", "reply");
+
+        public AdminAddCommand(TomeChat chat)
         {
-            _database = database;
-            _adminChannel = adminChannel;
+            _chat = chat;
         }
 
         public bool Parse(UserMessage message)
         {
             Match match = Regex.Match(message.Message, RegexString);
-            var isAdminChannel = message.Channel.Name == _adminChannel;
+            var isAdminChannel = message.Channel.Name == _chat.Channels["mods"];
 
             return match.Success && isAdminChannel;
         }
 
-        public TomeReply Execute(UserMessage userMessage)
+        public void Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 
@@ -38,20 +34,36 @@ namespace Tomestone.Commands
             string trigger = match.Groups[1].ToString();
             string reply = match.Groups[2].ToString();
 
-            var message = AddSpecialCommandToDatabase(addedBy, trigger, reply);
-            return new TomeReply(userMessage.Channel, message);
+            var message = AddCommandToDatabase(addedBy, trigger, reply);
+            _chat.SendMessage(userMessage.Channel.Name, "/me :: " + message);
         }
 
-        private string AddSpecialCommandToDatabase(string from, string trigger, string reply)
+        private string AddCommandToDatabase(string from, string trigger, string reply)
         {
-            var ok = _database.Tables["special"].Insert(from, trigger.ToLower(), reply);
-            if (!ok) 
-                return TomeReply.Error();
+            //Create data to be added into the database
+            var data = new Dictionary<string, string>();
+            data["addedBy"] = from;
+            data["trigger"] = trigger.ToLower();
+            data["reply"] = reply;
 
-            var entry = _database.Tables["special"].GetLatestEntry();
-            _database.ReplyCache.Add(entry);
+            var ok = _commandTable.Insert(data);
+            if (!ok) return DefaultReplies.Error();
 
-            return TomeReply.Confirmation();
+            //Create TomeMessage to log in the history.
+            var entry = _commandTable.GetLatestEntry();
+            var tomeReply = CreateReply(entry);
+            _chat.ReplyCache.Add(tomeReply);
+
+            return "Command !" + trigger + " has been created succesfully.";
+        }
+
+        private static TomeReply CreateReply(TableEntry entry)
+        {
+            var message = entry.Columns["reply"];
+            var info = "Command #" + entry.Columns["id"] + " ( " + entry.Columns["trigger"] + " -> " + entry.Columns["reply"] + " )";
+
+            var tomeReply = new TomeReply(message, info);
+            return tomeReply;
         }
     }
 }

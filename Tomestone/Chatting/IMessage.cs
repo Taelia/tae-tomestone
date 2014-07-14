@@ -1,11 +1,11 @@
-﻿using Meebey.SmartIrc4net;
+﻿using TomeLib.Irc;
 
 namespace Tomestone.Chatting
 {
     public interface IMessage
     {
-        Channel Channel { get; }
-        IrcUser From { get; }
+        TwitchIrcChannel Channel { get; }
+        TwitchChannelUser From { get; }
         string Message { get; }
     }
 }

@@ -1,22 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
+using TomeLib.Db;
 using Tomestone.Chatting;
-using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
     public class UserTeachReply : ICommand
     {
+        private TomeChat _chat;
+
         private readonly Dictionary<string, DateTime> _replies = new Dictionary<string, DateTime>();
-        private readonly ChatDatabase _database;
 
         Random r = new Random();
 
-        public UserTeachReply(ChatDatabase database)
+        Dictionary<string, Table> Tables = new Dictionary<string, Table>(); 
+
+        public UserTeachReply(TomeChat chat)
         {
-            _database = database;
+            _chat = chat;
+
+            Tables.Add("reply", new Table(Database.GetDatabase("tomestone.db"), "replies", "id", "addedBy", "trigger", "reply"));
         }
 
         public bool Parse(UserMessage message)
@@ -26,32 +30,43 @@ namespace Tomestone.Commands
             return random;
         }
 
-        public TomeReply Execute(UserMessage userMessage)
+        public void Execute(UserMessage userMessage)
         {
             var search = userMessage.Message;
 
-            var message = GetReplyFromDatabase(search);
-            if (message == "") return null;
+            var reply = GetReplyFromDatabase(search);
+            if (reply == "") return;
 
-            message = ReplaceWildcards(userMessage.From.Nick, message);
+            reply = ReplaceWildcards(userMessage.From.Nick, reply);
 
-            return new TomeReply(userMessage.Channel, message);
+            _chat.SendMessage(userMessage.Channel.Name, reply);
         }
 
         private string GetReplyFromDatabase(string search)
         {
-            var table = _database.Tables["reply"];
+            var table = Tables["reply"];
 
             var entries = table.SearchBy("trigger", search);
             if (entries == null) 
                 return "";
 
-            var obj = PickUnusedReply(entries);
-            if (obj == null) 
+            var entry = PickUnusedReply(entries);
+            if (entry == null) 
                 return "";
 
-            _database.ReplyCache.Add(obj);
-            return obj.PrintMessage();
+            var reply = CreateReply(entry);
+            _chat.ReplyCache.Add(reply);
+            return entry.Columns["reply"];
+        }
+
+        private static TomeReply CreateReply(TableEntry entry)
+        {
+            var message = entry.Columns["reply"];
+
+            var info = "Reply #" + entry.Columns["id"] + " ( " + entry.Columns["trigger"] + " -> " + entry.Columns["reply"] + " )";
+
+            var tomeReply = new TomeReply(message, info);
+            return tomeReply;
         }
 
         private string ReplaceWildcards(string user, string message)
@@ -61,20 +76,20 @@ namespace Tomestone.Commands
             return reply;
         }
 
-        private TableReply PickUnusedReply(List<TableReply> results)
+        private TableEntry PickUnusedReply(List<TableEntry> results)
         {
             //Where the reply is not in the list of replies, or if it is, where 10 minutes have passed since it's been put in there.
-            var list = results.Where(x => !(_replies.ContainsKey(x.Message)) || DateTime.Now > _replies[x.Message] + TimeSpan.FromMinutes(10)).ToArray();
+            var list = results.Where(x => !(_replies.ContainsKey(x.Columns["reply"])) || DateTime.Now > _replies[x.Columns["reply"]] + TimeSpan.FromMinutes(10)).ToArray();
             if (list.Length == 0) return null;
 
             int random = r.Next(0, list.Length);
 
             var obj = list[random];
 
-            if (!_replies.ContainsKey(obj.Message))
-                _replies.Add(obj.Message, DateTime.Now);
+            if (!_replies.ContainsKey(obj.Columns["reply"]))
+                _replies.Add(obj.Columns["reply"], DateTime.Now);
             else
-                _replies[obj.Message] = DateTime.Now;
+                _replies[obj.Columns["reply"]] = DateTime.Now;
 
             return obj;
         }

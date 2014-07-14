@@ -1,53 +1,56 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using TomeLib.Db;
 using Tomestone.Chatting;
-using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
     public class AdminDeleteCommand : ICommand
     {
-        private readonly ChatDatabase _database;
-        private readonly string _adminChannel;
-        private const string RegexString = "@delete (.+?) (.+)";
+        private readonly TomeChat _chat;
+        private const string RegexString = "^@delete (.+?) (.+)";
 
-        public AdminDeleteCommand(ChatDatabase database, string adminChannel)
+        readonly Dictionary<string, Table> _tables = new Dictionary<string, Table>();
+
+        public AdminDeleteCommand(TomeChat chat)
         {
-            _database = database;
-            _adminChannel = adminChannel;
+            _chat = chat;
+
+            _tables.Add("command", new Table(Database.GetDatabase("tomestone.db"), "commands", "id"));
+            _tables.Add("reply", new Table(Database.GetDatabase("tomestone.db"), "replies", "id"));
+            _tables.Add("quote", new Table(Database.GetDatabase("tomestone.db"), "quotes", "id"));
         }
 
         public bool Parse(UserMessage message)
         {
             Match match = Regex.Match(message.Message, RegexString);
-            var isAdminChannel = message.Channel.Name == _adminChannel;
+            var isAdminChannel = message.Channel.Name == _chat.Channels["mods"];
 
             return match.Success && isAdminChannel;
         }
 
-        public TomeReply Execute(UserMessage userMessage)
+        public void Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 
-            string tableName = match.Groups[1].Value;
+            string tableName = match.Groups[1].Value.ToLower();
             string id = match.Groups[2].Value;
 
-            var ok = DeleteEntryFromDatabase(tableName, id);
-            return new TomeReply(userMessage.Channel, ok);
+            var message = DeleteEntryFromDatabase(tableName, id);
+            _chat.SendMessage(userMessage.Channel.Name, "/me :: " + message);
         }
 
         private string DeleteEntryFromDatabase(string tableName, string id)
         {
-            if (!_database.Tables.ContainsKey(tableName))
-                return TomeReply.TypeNotFoundError(_database);
+            if (!_tables.ContainsKey(tableName))
+                return "Type not found. Choose from: 'command', 'reply', or 'quote'.";
 
-            var table = _database.Tables[tableName];
-            var entry = table.GetById(id);
-
+            var table = _tables[tableName];
             var ok = table.Delete(id);
-            if (!ok) 
-                return TomeReply.Error();
+            if (!ok) return DefaultReplies.Error();
 
-            return entry.Type + " #" + id + " has been deleted.";
+            tableName = char.ToUpper(tableName[0]) + tableName.Substring(1);
+            return tableName + " #" + id + " has been deleted.";
         }
     }
 }

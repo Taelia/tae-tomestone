@@ -1,26 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using Meebey.SmartIrc4net;
+using TomeLib.Db;
 using Tomestone.Chatting;
-using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
     public class UserQuoteCommand : ICommand
     {
-        private readonly ChatDatabase _database;
-        private readonly History<UserMessage> _history;
+        private readonly TomeChat _chat;
 
-        private const string RegexString = "!quote (.+?) (.+)";
+        readonly Dictionary<string, Table> _tables = new Dictionary<string, Table>(); 
 
-        public UserQuoteCommand(ChatDatabase database, History<UserMessage> history)
+        private const string RegexString = "^!quote (.+?) (.+)";
+
+        public UserQuoteCommand(TomeChat chat)
         {
-            _database = database;
-            _history = history;
+            _chat = chat;
+
+            _tables.Add("quote", new Table(Database.GetDatabase("tomestone.db"), "quotes", "id", "addedBy", "trigger", "reply"));
         }
 
         public bool Parse(UserMessage userMessage)
@@ -29,7 +26,7 @@ namespace Tomestone.Commands
             return match.Success;
         }
 
-        public TomeReply Execute(UserMessage userMessage)
+        public void Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 
@@ -37,22 +34,40 @@ namespace Tomestone.Commands
             string search = match.Groups[2].ToString();
 
             var reply = AddQuoteToDatabase(userMessage.From.Nick, user, search);
-            return new TomeReply(userMessage.Channel, reply);
+            _chat.SendMessage(userMessage.Channel.Name, reply);
         }
 
         private string AddQuoteToDatabase(string from, string user, string search)
         {
             //Get the latest message from user containing the search string.
-            var userMessage = _history.Search(user, search);
+            var userMessage = _chat.ReceivedMessages.Search(user, search);
+            if (userMessage == null)
+                return DefaultReplies.Error();
 
-            var ok = _database.Tables["quote"].Insert(from, userMessage.From.Nick, userMessage.Message);
+            var data = new Dictionary<string, string>();
+            data["addedBy"] = from;
+            data["trigger"] = user;
+            data["reply"] = userMessage.Message;
+
+            var ok = _tables["quote"].Insert(data);
             if (!ok) 
-                return TomeReply.Error();
+                return DefaultReplies.Error();
 
-            var entry = _database.Tables["quote"].GetLatestEntry();
-            _database.ReplyCache.Add(entry);
+            var entry = _tables["quote"].GetLatestEntry();
+            var reply = CreateReply(entry);
+            _chat.ReplyCache.Add(reply);
 
-            return TomeReply.Confirmation();
+            return DefaultReplies.Confirmation();
+        }
+
+        private static TomeReply CreateReply(TableEntry entry)
+        {
+            var message = "\"" + entry.Columns["reply"] + "\" -" + entry.Columns["trigger"];
+
+            var info = "Quote #" + entry.Columns["id"] + " ( " + entry.Columns["trigger"] + " -> " + entry.Columns["reply"] + " )";
+
+            var tomeReply = new TomeReply(message, info);
+            return tomeReply;
         }
     }
 }

@@ -1,58 +1,79 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using TomeLib.Db;
 using Tomestone.Chatting;
-using Tomestone.Databases;
 
 namespace Tomestone.Commands
 {
     public class AdminEditCommand : ICommand
     {
-        private readonly ChatDatabase _database;
-        private readonly string _adminChannel;
-        private const string RegexString = "@edit (.+?) (.+?) (.+?)=(.+)"; 
+        private TomeChat _chat;
 
-        public AdminEditCommand(ChatDatabase database, string adminChannel)
+        private const string RegexString = "^@edit (.+?) (.+?) (.+?)=(.+)";
+
+        public Dictionary<string, Table> Tables = new Dictionary<string, Table>();
+
+        public AdminEditCommand(TomeChat chat)
         {
-            _database = database;
-            _adminChannel = adminChannel;
+            _chat = chat;
+
+            Tables.Add("command", new Table(Database.GetDatabase("tomestone.db"), "commands", "id", "reply"));
+            Tables.Add("reply", new Table(Database.GetDatabase("tomestone.db"), "replies", "id", "reply"));
         }
 
         public bool Parse(UserMessage message)
         {
             Match match = Regex.Match(message.Message, RegexString);
-            var isAdminChannel = message.Channel.Name == _adminChannel;
+            var isAdminChannel = message.Channel.Name == _chat.Channels["mods"];
 
             return match.Success && isAdminChannel;
         }
 
-        public TomeReply Execute(UserMessage userMessage)
+        public void Execute(UserMessage userMessage)
         {
             Match match = Regex.Match(userMessage.Message, RegexString);
 
-            string type = match.Groups[1].Value;
+            string type = match.Groups[1].Value.ToLower();
             string id = match.Groups[2].Value;
             string toReplace = match.Groups[3].Value;
             string replaceWith = match.Groups[4].Value;
 
             var message = EditEntry(type, id, toReplace, replaceWith);
-            return new TomeReply(userMessage.Channel, message);
+            _chat.SendMessage(userMessage.Channel.Name, "/me :: " + message);
         }
 
-        private string EditEntry(string type, string id, string toReplace, string replaceWith)
+        private string EditEntry(string tableName, string id, string toReplace, string replaceWith)
         {
-            if (type == "quote") 
-                return TomeReply.Error();
+            if (!Tables.ContainsKey(tableName))
+                return "/me :: Type not found. Choose from: 'command' or 'reply'.";
 
-            if (!_database.Tables.ContainsKey(type)) 
-                return TomeReply.TypeNotFoundError(_database);
-
-            var table = _database.Tables[type];
-
-            var ok = table.Edit(id, toReplace, replaceWith);
-            if (!ok) 
-                return TomeReply.Error();
-
+            var table = Tables[tableName];
             var entry = table.GetById(id);
-            return "Edited: " + entry.PrintInfo();
+
+            var message = entry.Columns["reply"];
+            var newMessage = message.Replace(toReplace, replaceWith);
+            
+            // "reply" is the name of the column we want to edit.
+            var ok = table.Update(id, "reply", newMessage);
+            if (!ok) return DefaultReplies.Error();
+
+            entry.Columns["reply"] = newMessage;
+            var tomeReply = CreateReply(tableName, entry);
+            _chat.ReplyCache.Add(tomeReply);
+
+            return "Edited: " + tomeReply.InfoMessage;
+        }
+
+        private static TomeReply CreateReply(string tableName, TableEntry entry)
+        {
+            var message = entry.Columns["reply"];
+
+            tableName = char.ToUpper(tableName[0]) + tableName.Substring(1);
+
+            var info = tableName + " #" + entry.Columns["id"] + " ( " + entry.Columns["trigger"] + " -> " + entry.Columns["reply"] + " )";
+
+            var tomeReply = new TomeReply(message, info);
+            return tomeReply;
         }
     }
 }
